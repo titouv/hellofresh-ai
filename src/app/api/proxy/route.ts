@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { RecipeScraped } from "../../../../recipe_types";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,15 +13,18 @@ export async function GET(request: Request) {
   }
 
   try {
+    const cheerio = require("cheerio");
     const response = await fetch(url);
-    const data = await response.text();
-    return new NextResponse(data, {
-      headers: {
-        "Content-Type": response.headers.get("Content-Type") || "text/plain",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+    const html = await response.text();
+
+    const $ = cheerio.load(html);
+    const nextData = $("#__NEXT_DATA__");
+    const data = JSON.parse(nextData.text());
+    const recipe: RecipeScraped = data.props.pageProps.ssrPayload.recipe;
+
+    return NextResponse.json(recipe);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch URL" }, { status: 500 });
+    console.error("Error scraping recipe:", error);
+    return NextResponse.json({ error: "Failed to scrape recipe" }, { status: 500 });
   }
 }

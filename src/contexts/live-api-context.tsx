@@ -17,19 +17,22 @@
 import { createContext, FC, ReactNode, useContext } from "react";
 import { useLiveAPI, UseLiveAPIResults } from "../hooks/use-live-api";
 import { LiveClientOptions } from "../types";
+import { RecipeScraped } from "../../recipe_types";
 
 const LiveAPIContext = createContext<UseLiveAPIResults | undefined>(undefined);
 
 export type LiveAPIProviderProps = {
   children: ReactNode;
   options: LiveClientOptions;
+  recipe?: RecipeScraped | null;
 };
 
 export const LiveAPIProvider: FC<LiveAPIProviderProps> = ({
   options,
   children,
+  recipe,
 }) => {
-  const liveAPI = useLiveAPI(options);
+  const liveAPI = useLiveAPI(options, recipe);
 
   return (
     <LiveAPIContext.Provider value={liveAPI}>

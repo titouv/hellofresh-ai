@@ -20,6 +20,7 @@ import { LiveClientOptions } from "../types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
+import { RecipeScraped } from "../../recipe_types";
 import {
   ActivityHandling,
   LiveConnectConfig,
@@ -27,6 +28,7 @@ import {
   Modality,
   TurnCoverage,
 } from "@google/genai";
+import { toolsForConfig } from "@/components/tool-call";
 
 export type UseLiveAPIResults = {
   client: GenAILiveClient;
@@ -40,112 +42,78 @@ export type UseLiveAPIResults = {
   volume: number;
 };
 
-const systemInstruction: LiveConnectConfig["systemInstruction"] = {
-  parts: [
-    {
-      text: `Tu es un assistant qui répond au question sur la recette de cuisine.`,
-    },
-    {
-      text: `Voici la recette : FILET MIGNON ET MARINADE À L’ORANGE
+const createSystemInstruction = (
+  recipe: RecipeScraped | null
+): LiveConnectConfig["systemInstruction"] => {
+  if (!recipe) {
+    return {
+      parts: [
+        {
+          text: `Tu es un assistant qui répond aux questions sur les recettes de cuisine. L'utilisateur n'a pas encore fourni de recette. Demande-lui de fournir une URL de recette HelloFresh pour commencer.`,
+        },
+      ],
+    };
+  }
 
-PRÉPARER LA MARINADE
-Préchauffez le four à 200 degrés et pressez
-l’orange. Ajoutez 21/2 cs de jus par personne,
-le vinaigre balsamique blanc, le miel ainsi que
-du sel et du poivre à la petite casserole et faites
-chauffer à feu moyen-vif pendant 6 à 8 minutes,
-jusqu’à ce que le volume ait réduit de moitié.
-CUIRE LES POMMES DE TERRE
-Pendant ce temps, portez une grande
-quantité d’eau à ébullition dans la casserole
-pour les pommes de terre. Épluchez-les et
-coupez-les grossièrement. Faites-les cuire 12 à
-15 minutes. Ensuite, égouttez-les et réservez
-avec le couvercle.
-CUIRE LA VIANDE
-Pendant ce temps, faites chauffer l’huile
-d’olive à feu moyen-vif dans la sauteuse. Salez
-et poivrez le filet mignon, puis saisissez-le
-sur tous les côtés pendant 4 minutes. Mettez
-la viande dans le plat à four, arrosez-la avec
-la marinade et enfournez-la 8 à 12 minutes.
-Retournez-la à mi-cuisson et arrosez-la avec un
-peu de la marinade du plat. Sortez la viande du
-four et laissez-la reposer dans de l’aluminium.
-Conservez la marinade.
-ÉTUVER LA LITTLE GEM
-Pendant ce temps, coupez la little gem en
-deux dans le sens de la longueur, sans retirer la
-base t. Faites chauffer la moitié du beurre à
-feu vif dans la même sauteuse tt. Mettez-y la
-little gem, face tranchée vers le bas, baissez le
-feu sur moyen, puis salez et poivrez. Faites cuire
-2 minutes, couvrez, puis poursuivez la cuisson
-7 à 10 minutes ou jusqu’à ce que la salade
-commence à réduire.
-ÉCRASER LA PURÉE
-Pendant ce temps, à l’aide du presse-purée,
-écrasez les pommes de terre avec le reste du
-beurre, la moutarde, un filet de lait ainsi que du
-sel et du poivre. Ciselez la ciboulette. Coupez le
-filet mignon en tranches.
-tCONSEIL : Si vous n’aimez pas la base de la
-little gem, retirez-la juste avant de servir, mais
-laissez-la pendant la cuisson !
-SERVIR
-Servez la purée de pommes de terre
-et le filet mignon. Arrosez la viande avec la
-marinade à l’orange. Présentez la little gem
-étuvée à côté et parsemez-la de ciboulette.
-ttCONSEIL : Si vous préparez ce plat pour
-plus de 2 personnes, utilisez deux sauteuse`,
-    },
-  ],
-};
+  const recipeSteps = recipe.steps
+    .map((step, index) => `${index + 1}. ${step.instructions}`)
+    .join("\n");
 
-const defaultConfig: LiveConnectConfig = {
-  responseModalities: [Modality.AUDIO],
-  mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
-  speechConfig: {
-    languageCode: "fr-FR",
-    voiceConfig: {
-      prebuiltVoiceConfig: {
-        voiceName: "Puck",
+  return {
+    parts: [
+      {
+        text: `Tu es un assistant qui répond aux questions sur la recette de cuisine suivante.`,
       },
-    },
-  },
-  systemInstruction: systemInstruction,
-};
-// const defaultConfig: LiveConnectConfig = {
-//   responseModalities: [Modality.AUDIO],
-//   mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
-//   speechConfig: {
-//     languageCode: "fr-FR",
-//     voiceConfig: {
-//       prebuiltVoiceConfig: {
-//         voiceName: "Puck",
-//       },
-//     },
-//   },
-//   // contextWindowCompression: {
-//   //   triggerTokens: "25600",
-//   //   slidingWindow: { targetTokens: "12800" },
-//   // },
-//   systemInstruction: systemInstruction,
-// };
+      {
+        text: `Voici la recette : ${recipe.name}
 
-export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
+${recipe.description}
+
+Étapes de la recette :
+${recipeSteps}
+
+Réponds aux questions de l'utilisateur concernant cette recette et guide-le dans la préparation.`,
+      },
+    ],
+  };
+};
+
+export function useLiveAPI(
+  options: LiveClientOptions,
+  recipe?: RecipeScraped | null
+): UseLiveAPIResults {
   const client = useMemo(() => new GenAILiveClient(options), [options]);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
   const [model, setModel] = useState<string>(
-    // "models/gemini-2.5-flash-live-preview"
     "models/gemini-2.5-flash-preview-native-audio-dialog"
   );
-  // const [model, setModel] = useState<string>("models/gemini-2.0-flash-exp");
+
+  const defaultConfig: LiveConnectConfig = useMemo(
+    () => ({
+      responseModalities: [Modality.AUDIO],
+      mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+      speechConfig: {
+        languageCode: "fr-FR",
+        voiceConfig: {
+          prebuiltVoiceConfig: {
+            voiceName: "Puck",
+          },
+        },
+      },
+      tools: toolsForConfig,
+      systemInstruction: createSystemInstruction(recipe || null),
+    }),
+    [recipe]
+  );
+
   const [config, setConfig] = useState<LiveConnectConfig>(defaultConfig);
   const [connected, setConnected] = useState(false);
   const [volume, setVolume] = useState(0);
+
+  useEffect(() => {
+    setConfig(defaultConfig);
+  }, [defaultConfig]);
 
   // register audio for streaming server -> speakers
   useEffect(() => {
@@ -169,7 +137,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
       setConnected(true);
     };
 
-    const onClose = (e) => {
+    const onClose = (e: any) => {
       console.log("onClose", e);
       setConnected(false);
     };
