@@ -124,9 +124,6 @@ function ToolCallComponent({ recipe }: { recipe: RecipeScraped | null }) {
         alt="step"
         className="w-full h-64 object-cover rounded-lg mb-6"
       />
-      <p className="text-lg text-gray-700 dark:text-gray-300 mb-4">
-        {shownStep?.instructions}
-      </p>
       <div
         className="prose dark:prose-invert max-w-none"
         dangerouslySetInnerHTML={{ __html: shownStep?.instructionsHTML || "" }}

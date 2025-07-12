@@ -21,7 +21,13 @@ if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
   throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is not set");
 }
 
-function Inside({ recipe, setRecipe }: { recipe: RecipeScraped | null; setRecipe: (recipe: RecipeScraped | null) => void }) {
+function Inside({
+  recipe,
+  setRecipe,
+}: {
+  recipe: RecipeScraped | null;
+  setRecipe: (recipe: RecipeScraped | null) => void;
+}) {
   const { client, connected, connect, disconnect } = useLiveAPIContext();
   const [recipeUrl, setRecipeUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +39,7 @@ function Inside({ recipe, setRecipe }: { recipe: RecipeScraped | null; setRecipe
   const handleRecipeUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!recipeUrl.trim()) return;
-    
+
     setIsLoading(true);
     try {
       const scrapedRecipe = await scrapeRecipe(recipeUrl);
@@ -91,7 +97,7 @@ function Inside({ recipe, setRecipe }: { recipe: RecipeScraped | null; setRecipe
             </form>
           </div>
         )}
-        
+
         {recipe && (
           <div className="border-b pb-4">
             <h2 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
@@ -165,7 +171,7 @@ import { TextInput } from "@/components/text-input";
 
 export default function Home() {
   const [recipe, setRecipe] = useState<RecipeScraped | null>(null);
-  
+
   return (
     <LiveAPIProvider
       options={{
@@ -173,9 +179,9 @@ export default function Home() {
       }}
       recipe={recipe}
     >
-      <ToolCall recipe={recipe} />
-      <TextInput />
+      {/* <TextInput /> */}
       <Inside recipe={recipe} setRecipe={setRecipe} />
+      <ToolCall recipe={recipe} />
     </LiveAPIProvider>
   );
 }
