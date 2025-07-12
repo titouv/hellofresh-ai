@@ -118,16 +118,25 @@ function ToolCallComponent({ recipe }: { recipe: RecipeScraped | null }) {
     return null;
   }
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-      <img
-        src={baseImageUrl + shownStep?.images[0].link}
-        alt="step"
-        className="w-full h-64 object-cover rounded-lg mb-6"
-      />
-      <div
-        className="prose dark:prose-invert max-w-none"
-        dangerouslySetInnerHTML={{ __html: shownStep?.instructionsHTML || "" }}
-      />
+    <div className="max-w-4xl mx-auto px-4 pb-8">
+      <div className="bg-white rounded-2xl shadow-lg border border-green-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 p-4">
+          <h3 className="text-white font-semibold text-lg">Recipe Step</h3>
+        </div>
+        <div className="p-6">
+          <div className="mb-6">
+            <img
+              src={baseImageUrl + shownStep?.images[0].link}
+              alt="Recipe step"
+              className="w-full h-64 object-cover rounded-xl shadow-md"
+            />
+          </div>
+          <div
+            className="prose prose-lg max-w-none text-gray-700 [&>h1]:text-gray-800 [&>h2]:text-gray-800 [&>h3]:text-gray-800 [&>p]:text-gray-600 [&>ul]:text-gray-600 [&>ol]:text-gray-600"
+            dangerouslySetInnerHTML={{ __html: shownStep?.instructionsHTML || "" }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
