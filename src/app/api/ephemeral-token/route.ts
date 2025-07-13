@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 export async function GET() {
   const client = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY,
+    httpOptions: { apiVersion: "v1alpha" },
   });
   const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 

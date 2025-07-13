@@ -47,6 +47,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   // Static config that never changes to prevent re-renders
   const config: LiveConnectConfig = useMemo(
     () => ({
+      httpOptions: { apiVersion: "v1alpha" },
       responseModalities: [Modality.AUDIO],
       mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
       speechConfig: {
@@ -133,6 +134,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
       throw new Error("config has not been set");
     }
     client.disconnect();
+    console.log("connect", model, config);
     await client.connect(model, config);
   }, [client, config, model]);
 

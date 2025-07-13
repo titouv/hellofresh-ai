@@ -153,6 +153,7 @@ export default function Home() {
     <LiveAPIProvider
       options={{
         apiKey: token.name,
+        httpOptions: { apiVersion: "v1alpha" },
       }}
     >
       <RecipeProvider>
