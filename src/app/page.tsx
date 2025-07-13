@@ -71,41 +71,41 @@ function Inside({
   }, [connected, client, muted, audioRecorder]);
 
   return (
-    <div className=" px-4">
+    <div className="px-4 py-6">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center ">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
             HelloFresh AI Assistant
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm sm:text-base">
             Your smart cooking companion for HelloFresh recipes
           </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-8 mb-6">
-          <div className="flex flex-col gap-6">
+        <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-4 sm:p-6 lg:p-8 mb-6">
+          <div className="flex flex-col gap-4 sm:gap-6">
             {!recipe && (
-              <div className="border-b border-green-100 pb-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <div className="border-b border-green-100 pb-4 sm:pb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
                   Add Recipe URL
                 </h2>
-                <form onSubmit={handleRecipeUrlSubmit} className="flex gap-3">
+                <form onSubmit={handleRecipeUrlSubmit} className="flex flex-col sm:flex-row gap-3">
                   <input
                     type="url"
                     value={recipeUrl}
                     onChange={(e) => setRecipeUrl(e.target.value)}
                     placeholder="Enter HelloFresh recipe URL..."
-                    className="flex-1 px-4 py-3 border border-green-200 rounded-xl bg-green-50/50 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                    className="flex-1 px-4 py-3 border border-green-200 rounded-xl bg-green-50/50 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-sm sm:text-base"
                     required
                   />
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-sm hover:shadow-md"
+                    className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-sm hover:shadow-md text-sm sm:text-base min-h-[44px]"
                   >
                     {isLoading ? (
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center justify-center gap-2">
                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                         Loading...
                       </span>
@@ -118,20 +118,20 @@ function Inside({
             )}
 
             {recipe && (
-              <div className="border-b border-green-100 pb-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-800 mb-2">
+              <div className="border-b border-green-100 pb-4 sm:pb-6">
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
                       {recipe.name}
                     </h2>
-                    <p className="text-gray-600 mb-3">{recipe.description}</p>
+                    <p className="text-gray-600 mb-3 text-sm sm:text-base">{recipe.description}</p>
                   </div>
                   <button
                     onClick={() => {
                       setRecipe(null);
                       setRecipeUrl("");
                     }}
-                    className="text-sm text-green-600 hover:text-green-700 bg-green-50 px-3 py-1 rounded-lg transition-colors"
+                    className="text-sm text-green-600 hover:text-green-700 bg-green-50 px-3 py-2 rounded-lg transition-colors self-start min-h-[36px]"
                   >
                     Change Recipe
                   </button>
@@ -139,10 +139,10 @@ function Inside({
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
-                  <div className="text-gray-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-green-50 rounded-xl gap-3">
+                  <div className="text-gray-700 flex-1">
                     <span className="text-sm font-medium">Audio Volume</span>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -151,7 +151,7 @@ function Inside({
                   </div>
                   <button
                     onClick={() => setMuted(!muted)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all shadow-sm ${
+                    className={`w-full sm:w-auto px-4 py-2 rounded-lg font-medium transition-all shadow-sm min-h-[44px] text-sm ${
                       muted
                         ? "bg-red-500 hover:bg-red-600 text-white"
                         : "bg-green-600 hover:bg-green-700 text-white"
@@ -163,8 +163,8 @@ function Inside({
               </div>
 
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl">
-                  <div className="text-gray-700">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-green-50 rounded-xl gap-3">
+                  <div className="text-gray-700 flex-1">
                     <span className="text-sm font-medium">
                       Connection Status
                     </span>
@@ -185,14 +185,14 @@ function Inside({
                     <button
                       onClick={() => connect()}
                       disabled={connected}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
+                      className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium min-h-[44px]"
                     >
                       Connect
                     </button>
                     <button
                       onClick={() => disconnect()}
                       disabled={!connected}
-                      className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium"
+                      className="flex-1 sm:flex-none px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium min-h-[44px]"
                     >
                       Disconnect
                     </button>
@@ -200,6 +200,12 @@ function Inside({
                 </div>
               </div>
             </div>
+
+            {recipe && (
+              <div className="mt-6">
+                <RecipeSteps steps={recipe.steps} />
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -207,7 +213,7 @@ function Inside({
   );
 }
 import { ToolCall } from "@/components/tool-call";
-import { TextInput } from "@/components/text-input";
+import { RecipeSteps } from "@/components/recipe-steps";
 
 export default function Home() {
   const [recipe, setRecipe] = useState<RecipeScraped | null>(null);
@@ -220,7 +226,6 @@ export default function Home() {
       recipe={recipe}
     >
       <Inside recipe={recipe} setRecipe={setRecipe} />
-      {/* <TextInput /> */}
       <ToolCall recipe={recipe} />
     </LiveAPIProvider>
   );

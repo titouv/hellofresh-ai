@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { useEffect, useRef, useState, memo } from "react";
+import { useEffect, useState, memo } from "react";
 import {
   FunctionDeclaration,
-  LiveConnectConfig,
   LiveServerToolCall,
   MediaResolution,
   Modality,
@@ -109,8 +108,6 @@ function ToolCallComponent({ recipe }: { recipe: RecipeScraped | null }) {
     };
   }, [client, recipe]);
 
-  const embedRef = useRef<HTMLDivElement>(null);
-
   const baseImageUrl =
     "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";
 
@@ -118,21 +115,21 @@ function ToolCallComponent({ recipe }: { recipe: RecipeScraped | null }) {
     return null;
   }
   return (
-    <div className="max-w-4xl mx-auto px-4 pb-8">
+    <div className="max-w-4xl mx-auto px-4 pb-6 sm:pb-8">
       <div className="bg-white rounded-2xl shadow-lg border border-green-100 overflow-hidden">
-        <div className="bg-gradient-to-r from-green-500 to-green-600 p-4">
-          <h3 className="text-white font-semibold text-lg">Recipe Step</h3>
+        <div className="bg-gradient-to-r from-green-500 to-green-600 p-3 sm:p-4">
+          <h3 className="text-white font-semibold text-base sm:text-lg">Recipe Step</h3>
         </div>
-        <div className="p-6">
-          <div className="mb-6">
+        <div className="p-4 sm:p-6">
+          <div className="mb-4 sm:mb-6">
             <img
               src={baseImageUrl + shownStep?.images[0].link}
               alt="Recipe step"
-              className="w-full h-64 object-cover rounded-xl shadow-md"
+              className="w-full h-48 sm:h-64 object-cover rounded-xl shadow-md"
             />
           </div>
           <div
-            className="prose prose-lg max-w-none text-gray-700 [&>h1]:text-gray-800 [&>h2]:text-gray-800 [&>h3]:text-gray-800 [&>p]:text-gray-600 [&>ul]:text-gray-600 [&>ol]:text-gray-600"
+            className="prose prose-sm sm:prose-lg max-w-none text-gray-700 [&>h1]:text-gray-800 [&>h2]:text-gray-800 [&>h3]:text-gray-800 [&>p]:text-gray-600 [&>ul]:text-gray-600 [&>ol]:text-gray-600 [&>p]:text-sm sm:[&>p]:text-base [&>li]:text-sm sm:[&>li]:text-base"
             dangerouslySetInnerHTML={{ __html: shownStep?.instructionsHTML || "" }}
           />
         </div>
