@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "HelloFresh AI Assistant",
   description: "Your smart cooking companion for HelloFresh recipes",
+  icons: {
+    icon: "/favicon-192x192.png",
+  },
 };
 
 export const viewport: Viewport = {
