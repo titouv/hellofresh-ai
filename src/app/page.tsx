@@ -4,52 +4,20 @@ import {
   LiveAPIProvider,
   useLiveAPIContext,
 } from "@/contexts/live-api-context";
+import { RecipeProvider, useRecipeContext } from "@/contexts/recipe-context";
 import { AudioRecorder } from "@/lib/audio-recorder";
 import { useEffect, useState } from "react";
-import { RecipeScraped } from "../../recipe_types";
-
-const scrapeRecipe = async (url: string): Promise<RecipeScraped> => {
-  const response = await fetch(`/api/proxy?url=${encodeURIComponent(url)}`);
-  if (!response.ok) {
-    throw new Error("Failed to scrape recipe");
-  }
-  const data = await response.json();
-  return data;
-};
 
 if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
   throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is not set");
 }
 
-function Inside({
-  recipe,
-  setRecipe,
-}: {
-  recipe: RecipeScraped | null;
-  setRecipe: (recipe: RecipeScraped | null) => void;
-}) {
+function Inside() {
   const { client, connected, connect, disconnect } = useLiveAPIContext();
-  const [recipeUrl, setRecipeUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
+  const { recipe, setRecipe } = useRecipeContext();
   const [audioRecorder] = useState(() => new AudioRecorder());
   const [muted, setMuted] = useState(false);
   const [inVolume, setInVolume] = useState(0);
-
-  const handleRecipeUrlSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!recipeUrl.trim()) return;
-
-    setIsLoading(true);
-    try {
-      const scrapedRecipe = await scrapeRecipe(recipeUrl);
-      setRecipe(scrapedRecipe);
-    } catch (error) {
-      console.error("Error scraping recipe:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   useEffect(() => {
     const onData = (base64: string) => {
@@ -88,32 +56,13 @@ function Inside({
               <div className="border-b border-green-100 pb-4 sm:pb-6">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
                   <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  Add Recipe URL
+                  Recherche de recettes par voix
                 </h2>
-                <form onSubmit={handleRecipeUrlSubmit} className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="url"
-                    value={recipeUrl}
-                    onChange={(e) => setRecipeUrl(e.target.value)}
-                    placeholder="Enter HelloFresh recipe URL..."
-                    className="flex-1 px-4 py-3 border border-green-200 rounded-xl bg-green-50/50 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-sm sm:text-base"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium shadow-sm hover:shadow-md text-sm sm:text-base min-h-[44px]"
-                  >
-                    {isLoading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        Loading...
-                      </span>
-                    ) : (
-                      "Load Recipe"
-                    )}
-                  </button>
-                </form>
+                <p className="text-gray-600 text-sm sm:text-base">
+                  Connectez-vous et demandez-moi de chercher une recette ! Par
+                  exemple : "Cherche-moi une recette de pâtes" ou "Je veux
+                  cuisiner quelque chose avec du poulet"
+                </p>
               </div>
             )}
 
@@ -124,16 +73,17 @@ function Inside({
                     <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
                       {recipe.name}
                     </h2>
-                    <p className="text-gray-600 mb-3 text-sm sm:text-base">{recipe.description}</p>
+                    <p className="text-gray-600 mb-3 text-sm sm:text-base">
+                      {recipe.description}
+                    </p>
                   </div>
                   <button
                     onClick={() => {
                       setRecipe(null);
-                      setRecipeUrl("");
                     }}
                     className="text-sm text-green-600 hover:text-green-700 bg-green-50 px-3 py-2 rounded-lg transition-colors self-start min-h-[36px]"
                   >
-                    Change Recipe
+                    Changer de recette
                   </button>
                 </div>
               </div>
@@ -214,19 +164,20 @@ function Inside({
 }
 import { ToolCall } from "@/components/tool-call";
 import { RecipeSteps } from "@/components/recipe-steps";
+import { TextInput } from "@/components/text-input";
 
 export default function Home() {
-  const [recipe, setRecipe] = useState<RecipeScraped | null>(null);
-
   return (
     <LiveAPIProvider
       options={{
         apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY!,
       }}
-      recipe={recipe}
     >
-      <Inside recipe={recipe} setRecipe={setRecipe} />
-      <ToolCall recipe={recipe} />
+      <RecipeProvider>
+        <Inside />
+        <TextInput />
+        <ToolCall />
+      </RecipeProvider>
     </LiveAPIProvider>
   );
 }

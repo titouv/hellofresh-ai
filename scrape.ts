@@ -14,7 +14,7 @@ export const scrape = async (url: string) => {
   return recipe;
 };
 
-interface RecipeSearchResult {
+export interface RecipeSearchResult {
   id: string;
   name: string;
   slug: string;
@@ -28,8 +28,8 @@ interface RecipeSearchResult {
 
 export async function searchRecipes(query: string) {
   const url = `https://hfresh.info/fr-fr?search=${encodeURIComponent(query)}`;
-  const urlWithProxy = `/api/proxy2?url=${encodeURIComponent(url)}`;
-  const response = await fetch(urlWithProxy);
+  //   const urlWithProxy = `/api/proxy-html?url=${encodeURIComponent(url)}`;
+  const response = await fetch(url);
   const html = await response.text();
 
   const $ = cheerio.load(html);

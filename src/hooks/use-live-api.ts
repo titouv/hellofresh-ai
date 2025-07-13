@@ -20,13 +20,10 @@ import { LiveClientOptions } from "../types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
-import { RecipeScraped } from "../../recipe_types";
 import {
-  ActivityHandling,
   LiveConnectConfig,
   MediaResolution,
   Modality,
-  TurnCoverage,
 } from "@google/genai";
 import { toolsForConfig } from "@/components/tool-call";
 
@@ -42,54 +39,35 @@ export type UseLiveAPIResults = {
   volume: number;
 };
 
-const createSystemInstruction = (
-  recipe: RecipeScraped | null
-): LiveConnectConfig["systemInstruction"] => {
-  if (!recipe) {
-    return {
-      parts: [
-        {
-          text: `Tu es un assistant qui répond aux questions sur les recettes de cuisine. L'utilisateur n'a pas encore fourni de recette. Demande-lui de fournir une URL de recette HelloFresh pour commencer.`,
-        },
-      ],
-    };
-  }
-
-  const recipeSteps = recipe.steps
-    .map((step, index) => `${index + 1}. ${step.instructions}`)
-    .join("\n");
-
+const createSystemInstruction = (): LiveConnectConfig["systemInstruction"] => {
   return {
     parts: [
       {
-        text: `Tu es un assistant qui répond aux questions sur la recette de cuisine suivante.`,
-      },
-      {
-        text: `Voici la recette : ${recipe.name}
+        text: `Tu es un assistant qui aide les utilisateurs à trouver et cuisiner des recettes HelloFresh.
 
-${recipe.description}
+Tu peux:
+1. Chercher et sélectionner automatiquement des recettes en utilisant la fonction 'search_and_select_recipe' avec une requête (ingrédients, cuisine, nom de plat, etc.). Cette fonction trouvera des recettes correspondantes et sélectionnera automatiquement la première recette trouvée.
+2. Afficher une étape spécifique d'une recette en utilisant 'render_step' avec le numéro de l'étape (seulement si une recette est actuellement sélectionnée).
+3. Répondre aux questions sur les recettes et guider l'utilisateur dans la préparation.
 
-Étapes de la recette :
-${recipeSteps}
-
-Réponds aux questions de l'utilisateur concernant cette recette et guide-le dans la préparation.`,
+Si l'utilisateur n'a pas encore de recette, encourage-le à chercher une recette. Si une recette est sélectionnée, aide-le avec cette recette.`,
       },
     ],
   };
 };
 
 export function useLiveAPI(
-  options: LiveClientOptions,
-  recipe?: RecipeScraped | null
+  options: LiveClientOptions
 ): UseLiveAPIResults {
   const client = useMemo(() => new GenAILiveClient(options), [options]);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
   const [model, setModel] = useState<string>(
-    "models/gemini-2.5-flash-preview-native-audio-dialog"
+    "models/gemini-2.0-flash-live-001"
   );
 
-  const defaultConfig: LiveConnectConfig = useMemo(
+  // Static config that never changes to prevent re-renders
+  const config: LiveConnectConfig = useMemo(
     () => ({
       responseModalities: [Modality.AUDIO],
       mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
@@ -102,18 +80,15 @@ export function useLiveAPI(
         },
       },
       tools: toolsForConfig,
-      systemInstruction: createSystemInstruction(recipe || null),
+      systemInstruction: createSystemInstruction(), // Static system instruction
     }),
-    [recipe]
+    []
   );
 
-  const [config, setConfig] = useState<LiveConnectConfig>(defaultConfig);
   const [connected, setConnected] = useState(false);
   const [volume, setVolume] = useState(0);
 
-  useEffect(() => {
-    setConfig(defaultConfig);
-  }, [defaultConfig]);
+  // Remove the dynamic system instruction update effect completely
 
   // register audio for streaming server -> speakers
   useEffect(() => {
@@ -191,7 +166,7 @@ export function useLiveAPI(
   return {
     client,
     config,
-    setConfig,
+    setConfig: () => {}, // No-op function since config is now static
     model,
     setModel,
     connected,
