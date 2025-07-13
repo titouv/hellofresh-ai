@@ -39,131 +39,105 @@ function Inside() {
   }, [connected, client, muted, audioRecorder]);
 
   return (
-    <div className="px-4 py-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">
-            HelloFresh AI Assistant
-          </h1>
-          <p className="text-gray-600 text-sm sm:text-base">
-            Your smart cooking companion for HelloFresh recipes
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-4 sm:p-6 lg:p-8 mb-6">
-          <div className="flex flex-col gap-4 sm:gap-6">
-            {!recipe && (
-              <div className="border-b border-green-100 pb-4 sm:pb-6">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                  Recherche de recettes par voix
-                </h2>
-                <p className="text-gray-600 text-sm sm:text-base">
-                  Connectez-vous et demandez-moi de chercher une recette ! Par
-                  exemple : "Cherche-moi une recette de pâtes" ou "Je veux
-                  cuisiner quelque chose avec du poulet"
-                </p>
-              </div>
-            )}
-
-            {recipe && (
-              <div className="border-b border-green-100 pb-4 sm:pb-6">
-                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
-                      {recipe.name}
-                    </h2>
-                    <p className="text-gray-600 mb-3 text-sm sm:text-base">
-                      {recipe.description}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setRecipe(null);
-                    }}
-                    className="text-sm text-green-600 hover:text-green-700 bg-green-50 px-3 py-2 rounded-lg transition-colors self-start min-h-[36px]"
-                  >
-                    Changer de recette
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-green-50 rounded-xl gap-3">
-                  <div className="text-gray-700 flex-1">
-                    <span className="text-sm font-medium">Audio Volume</span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="font-mono text-sm">{inVolume}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setMuted(!muted)}
-                    className={`w-full sm:w-auto px-4 py-2 rounded-lg font-medium transition-all shadow-sm min-h-[44px] text-sm ${
-                      muted
-                        ? "bg-red-500 hover:bg-red-600 text-white"
-                        : "bg-green-600 hover:bg-green-700 text-white"
-                    }`}
-                  >
-                    {muted ? "🔇 Unmute" : "🎤 Mute"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-green-50 rounded-xl gap-3">
-                  <div className="text-gray-700 flex-1">
-                    <span className="text-sm font-medium">
-                      Connection Status
-                    </span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          connected
-                            ? "bg-green-500 animate-pulse"
-                            : "bg-red-500"
-                        }`}
-                      ></div>
-                      <span className="font-mono text-sm">
-                        {connected ? "Connected" : "Disconnected"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => connect()}
-                      disabled={connected}
-                      className="flex-1 sm:flex-none px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium min-h-[44px]"
-                    >
-                      Connect
-                    </button>
-                    <button
-                      onClick={() => disconnect()}
-                      disabled={!connected}
-                      className="flex-1 sm:flex-none px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm font-medium min-h-[44px]"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {recipe && (
-              <div className="mt-6">
-                <RecipeSteps steps={recipe.steps} />
-              </div>
-            )}
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Logo at top */}
+      <div className="text-center pt-8 pb-4">
+        <div className="inline-flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
+            <span className="text-white text-xl font-bold">HF</span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+            HelloFresh AI
+          </h1>
         </div>
+        <p className="text-gray-600 text-sm">Your smart cooking companion</p>
+      </div>
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
+        {/* Big mic button in center */}
+        <div className="mb-8">
+          <button
+            onClick={() => (connected ? disconnect() : connect())}
+            className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+              connected
+                ? "bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 scale-105"
+                : "bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105"
+            }`}
+          >
+            <span className="text-white text-3xl sm:text-4xl">
+              {connected ? "⏹️" : "🎤"}
+            </span>
+          </button>
+        </div>
+
+        {/* Connection status */}
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <div
+              className={`w-3 h-3 rounded-full ${
+                connected ? "bg-green-500 animate-pulse" : "bg-gray-400"
+              }`}
+            ></div>
+            <span className="text-sm font-medium text-gray-700">
+              {connected ? "Listening..." : "Tap to start"}
+            </span>
+          </div>
+
+          {/* {connected && !muted && (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-gray-600">Volume: {inVolume}</span>
+            </div>
+          )} */}
+        </div>
+
+        {/* Mute button */}
+        {connected && (
+          <button
+            onClick={() => setMuted(!muted)}
+            className={`px-6 py-3 rounded-full font-medium transition-all shadow-lg mb-6 ${
+              muted
+                ? "bg-red-500 hover:bg-red-600 text-white"
+                : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+            }`}
+          >
+            {muted ? "🔇 Unmute" : "🎤 Mute"}
+          </button>
+        )}
+
+        {/* Instructions */}
+        {!recipe && connected && (
+          <div className="max-w-sm text-center">
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Try saying: <br />
+              <span className="italic">"Search for a pasta recipe"</span>
+              <br />
+              <span className="italic">"I want to cook chicken"</span>
+            </p>
+          </div>
+        )}
+
+        {/* Recipe header */}
+        {recipe && (
+          <div className="max-w-sm text-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 mb-2">
+              {recipe.name}
+            </h2>
+            <p className="text-gray-600 text-sm mb-3">{recipe.description}</p>
+            <button
+              onClick={() => setRecipe(null)}
+              className="text-sm text-green-600 hover:text-green-700 bg-green-50 px-4 py-2 rounded-full transition-colors"
+            >
+              Choose different recipe
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 import { ToolCall } from "@/components/tool-call";
-import { RecipeSteps } from "@/components/recipe-steps";
 import { TextInput } from "@/components/text-input";
 
 export default function Home() {
@@ -174,9 +148,11 @@ export default function Home() {
       }}
     >
       <RecipeProvider>
-        <Inside />
-        <TextInput />
-        <ToolCall />
+        <div className="relative">
+          <Inside />
+          <TextInput />
+          <ToolCall />
+        </div>
       </RecipeProvider>
     </LiveAPIProvider>
   );
