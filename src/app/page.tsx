@@ -79,13 +79,6 @@ function Inside() {
               {connected ? "Listening..." : "Tap to start"}
             </span>
           </div>
-
-          {/* {connected && !muted && (
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-xs text-gray-600">Volume: {inVolume}</span>
-            </div>
-          )} */}
         </div>
 
         {/* Mute button */}

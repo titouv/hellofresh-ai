@@ -1,30 +1,10 @@
-/**
- * Copyright 2024 Google LLC
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GenAILiveClient } from "../lib/genai-live-client";
 import { LiveClientOptions } from "../types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
-import {
-  LiveConnectConfig,
-  MediaResolution,
-  Modality,
-} from "@google/genai";
+import { LiveConnectConfig, MediaResolution, Modality } from "@google/genai";
 import { toolsForConfig } from "@/components/tool-call";
 
 export type UseLiveAPIResults = {
@@ -56,9 +36,7 @@ Si l'utilisateur n'a pas encore de recette, encourage-le à chercher une recette
   };
 };
 
-export function useLiveAPI(
-  options: LiveClientOptions
-): UseLiveAPIResults {
+export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   const client = useMemo(() => new GenAILiveClient(options), [options]);
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
