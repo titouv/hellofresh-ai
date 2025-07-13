@@ -228,26 +228,27 @@ function ToolCallComponent() {
   if (!shownStep) {
     return null;
   }
-  
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
       <div className="max-w-sm mx-auto p-4">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-16 h-16 rounded-xl overflow-hidden shadow-md flex-shrink-0">
+        <div className="flex flex-col items-center gap-3 mb-3">
+          <div className="w-full h-32 rounded-xl overflow-hidden shadow-md mb-2">
             <img
               src={baseImageUrl + (shownStep?.images?.[0]?.link || "")}
               alt="Recipe step"
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="w-full">
             <h4 className="font-medium text-gray-800 text-sm mb-1">
-              Step {(recipe?.steps?.findIndex(s => s === shownStep) || 0) + 1}
+              Step {(recipe?.steps?.findIndex((s) => s === shownStep) || 0) + 1}
             </h4>
-            <div 
+            <div
               className="text-xs text-gray-600 line-clamp-2"
               dangerouslySetInnerHTML={{
-                __html: shownStep?.instructionsHTML?.replace(/<[^>]*>/g, '') || "",
+                __html:
+                  shownStep?.instructionsHTML?.replace(/<[^>]*>/g, "") || "",
               }}
             />
           </div>
