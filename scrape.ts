@@ -1,9 +1,6 @@
 import { RecipeScraped } from "./recipe_types";
 
-const cheerio = require("cheerio");
-
-const urlToScrape =
-  "https://www.hellofresh.fr/recipes/pilons-de-poulet-marines-et-grenailles-5cd56854729fc2001a1b4bf1";
+import * as cheerio from "cheerio";
 
 export const scrape = async (url: string) => {
   const response = await fetch(url);
@@ -16,3 +13,48 @@ export const scrape = async (url: string) => {
   console.dir(recipe, { depth: null });
   return recipe;
 };
+
+interface RecipeSearchResult {
+  id: string;
+  name: string;
+  slug: string;
+  pdf: string;
+  headline: string;
+  image: string;
+  label: string;
+  tags: string[];
+  url: string;
+}
+
+export async function searchRecipes(query: string) {
+  const url = `https://hfresh.info/fr-fr?search=${encodeURIComponent(query)}`;
+  const urlWithProxy = `/api/proxy2?url=${encodeURIComponent(url)}`;
+  const response = await fetch(urlWithProxy);
+  const html = await response.text();
+
+  const $ = cheerio.load(html);
+  const appData = $("#app").data("page");
+  const recipes = (appData as any).props.recipes.data.map((recipe: any) => {
+    // const url = https://www.hellofresh.fr/recipes/risotto-aux-asperges-lardons-fumes-623ae65fbe82d3463e5704fc
+    const url = `https://www.hellofresh.fr/recipes/${recipe.slug}-${recipe.id}`;
+    return {
+      id: recipe.id,
+      name: recipe.name,
+      slug: recipe.slug,
+      pdf: recipe.pdf,
+      headline: recipe.headline,
+      image: recipe.image,
+      label: recipe.label,
+      tags: recipe.tags,
+      url: url,
+    };
+  });
+
+  return recipes as RecipeSearchResult[];
+}
+
+if (require.main === module) {
+  searchRecipes("pilons de poulet").then((recipes) => {
+    console.log(recipes);
+  });
+}

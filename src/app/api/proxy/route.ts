@@ -25,6 +25,9 @@ export async function GET(request: Request) {
     return NextResponse.json(recipe);
   } catch (error) {
     console.error("Error scraping recipe:", error);
-    return NextResponse.json({ error: "Failed to scrape recipe" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to scrape recipe" },
+      { status: 500 }
+    );
   }
 }
