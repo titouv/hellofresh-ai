@@ -8,10 +8,6 @@ import { RecipeProvider, useRecipeContext } from "@/contexts/recipe-context";
 import { AudioRecorder } from "@/lib/audio-recorder";
 import { useEffect, useState } from "react";
 
-if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-  throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is not set");
-}
-
 function Inside() {
   const { client, connected, connect, disconnect } = useLiveAPIContext();
   const { recipe, setRecipe } = useRecipeContext();
@@ -139,12 +135,31 @@ function Inside() {
 }
 import { ToolCall } from "@/components/tool-call";
 import { TextInput } from "@/components/text-input";
+import { useQuery } from "@tanstack/react-query";
+import { AuthToken } from "@google/genai";
 
 export default function Home() {
+  const { data: token } = useQuery({
+    queryFn: async () => {
+      const response = await fetch("/api/ephemeral-token");
+      const data = await response.json();
+      return data.token as AuthToken;
+    },
+    queryKey: ["ephemeral-token"],
+  });
+
+  if (!token) {
+    return <div>Loading...</div>;
+  }
+
+  if (!token.name) {
+    return <div>No token name </div>;
+  }
+
   return (
     <LiveAPIProvider
       options={{
-        apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY!,
+        apiKey: token.name,
       }}
     >
       <RecipeProvider>
