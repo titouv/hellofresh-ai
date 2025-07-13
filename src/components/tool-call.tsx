@@ -3,7 +3,11 @@ import { FunctionDeclaration, LiveServerToolCall, Type } from "@google/genai";
 import { useLiveAPIContext } from "@/contexts/live-api-context";
 import { useRecipeContext } from "@/contexts/recipe-context";
 import { RecipeScraped } from "../../recipe_types";
-import { RecipeSearchResult, scrape } from "../../scrape";
+import { RecipeSearchResult, scrapeRecipe } from "../../scrape";
+import {
+  scrapeRecipeServerFn,
+  searchRecipesServerFn,
+} from "@/server_functions";
 
 const renderStepDeclaration: FunctionDeclaration = {
   name: "render_step",
@@ -53,27 +57,6 @@ function ToolCallComponent() {
   >(null);
   const { client } = useLiveAPIContext();
   const { recipe, setRecipe } = useRecipeContext();
-
-  const scrapeRecipe = async (url: string): Promise<RecipeScraped> => {
-    const urlWithProxy = `/api/proxy-html?url=${encodeURIComponent(url)}`;
-    const data = await scrape(urlWithProxy);
-    console.log("scrapeRecipe", data);
-    return data;
-  };
-
-  const searchRecipes = async (
-    query: string
-  ): Promise<RecipeSearchResult[]> => {
-    const response = await fetch(
-      `/api/search-recipes?query=${encodeURIComponent(query)}`
-    );
-    if (!response.ok) {
-      throw new Error("Failed to search recipes");
-    }
-    const data = await response.json();
-    console.log("searchRecipes", data);
-    return data;
-  };
 
   useEffect(() => {
     const onToolCall = async (toolCall: LiveServerToolCall) => {
@@ -144,11 +127,13 @@ function ToolCallComponent() {
           console.log("Searching and selecting recipe", fc.args);
           const query = (fc.args as any).query;
           try {
-            const results = await searchRecipes(query);
+            const results = await searchRecipesServerFn(query);
             if (results.length > 0) {
               const selectedRecipe = results[0]; // Always select the first result
               try {
-                const fullRecipe = await scrapeRecipe(selectedRecipe.url);
+                const fullRecipe = await scrapeRecipeServerFn(
+                  selectedRecipe.url
+                );
                 console.log("fullRecipe", fullRecipe);
                 setRecipe(fullRecipe);
                 functionResponses.push({

@@ -2,7 +2,7 @@ import { RecipeScraped } from "./recipe_types";
 
 import * as cheerio from "cheerio";
 
-export const scrape = async (url: string) => {
+export const scrapeRecipe = async (url: string) => {
   const response = await fetch(url);
   const html = await response.text();
 
@@ -28,7 +28,6 @@ export interface RecipeSearchResult {
 
 export async function searchRecipes(query: string) {
   const url = `https://hfresh.info/fr-fr?search=${encodeURIComponent(query)}`;
-  //   const urlWithProxy = `/api/proxy-html?url=${encodeURIComponent(url)}`;
   const response = await fetch(url);
   const html = await response.text();
 
