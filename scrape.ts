@@ -10,7 +10,7 @@ export const scrapeRecipe = async (url: string) => {
   const nextData = $("#__NEXT_DATA__");
   const data = JSON.parse(nextData.text());
   const recipe: RecipeScraped = data.props.pageProps.ssrPayload.recipe;
-  console.dir(recipe, { depth: null });
+  // console.dir(recipe, { depth: null });
   return recipe;
 };
 

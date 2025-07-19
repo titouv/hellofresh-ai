@@ -138,18 +138,23 @@ function ToolCallComponent() {
                 );
                 console.log("fullRecipe", fullRecipe);
                 setRecipe(fullRecipe);
-                functionResponses.push({
-                  response: {
-                    output: {
-                      success: true,
-                      message: `Recette "${
-                        selectedRecipe.name
-                      }" trouvée et sélectionnée automatiquement
+
+                const message = `Recette "${
+                  selectedRecipe.name
+                }" trouvée et sélectionnée automatiquement
 
                       Voici la recette:
                       ${fullRecipeToMarkdown(fullRecipe)}
                       
-                      `,
+                      `;
+
+                console.log("MESSAGE RETURNED TO USER", message);
+
+                functionResponses.push({
+                  response: {
+                    output: {
+                      success: true,
+                      message: message,
                     },
                   },
                   id: fc.id || "",

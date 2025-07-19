@@ -4,7 +4,12 @@ import { LiveClientOptions } from "../types";
 import { AudioStreamer } from "../lib/audio-streamer";
 import { audioContext } from "../lib/utils";
 import VolMeterWorket from "../lib/worklets/vol-meter";
-import { LiveConnectConfig, MediaResolution, Modality } from "@google/genai";
+import {
+  LiveConnectConfig,
+  MediaResolution,
+  Modality,
+  TurnCoverage,
+} from "@google/genai";
 import { toolsForConfig } from "@/components/tool-call";
 
 export type UseLiveAPIResults = {
@@ -19,11 +24,10 @@ export type UseLiveAPIResults = {
   volume: number;
 };
 
-const createSystemInstruction = (): LiveConnectConfig["systemInstruction"] => {
-  return {
-    parts: [
-      {
-        text: `Tu es un assistant qui aide les utilisateurs à trouver et cuisiner des recettes HelloFresh.
+const systemIntruction: LiveConnectConfig["systemInstruction"] = {
+  parts: [
+    {
+      text: `Tu es un assistant qui aide les utilisateurs à trouver et cuisiner des recettes HelloFresh.
 
 Tu peux:
 1. Chercher et sélectionner automatiquement des recettes en utilisant la fonction 'search_and_select_recipe' avec une requête (ingrédients, cuisine, nom de plat, etc.). Cette fonction trouvera des recettes correspondantes et sélectionnera automatiquement la première recette trouvée.
@@ -31,9 +35,8 @@ Tu peux:
 3. Répondre aux questions sur les recettes et guider l'utilisateur dans la préparation.
 
 Si l'utilisateur n'a pas encore de recette, encourage-le à chercher une recette. Si une recette est sélectionnée, aide-le avec cette recette.`,
-      },
-    ],
-  };
+    },
+  ],
 };
 
 export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
@@ -41,6 +44,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   const audioStreamerRef = useRef<AudioStreamer | null>(null);
 
   const [model, setModel] = useState<string>(
+    // "models/gemini-2.5-flash-preview-native-audio-dialog"
     "models/gemini-2.0-flash-live-001"
   );
 
@@ -49,7 +53,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
     () => ({
       httpOptions: { apiVersion: "v1alpha" },
       responseModalities: [Modality.AUDIO],
-      mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
+      // mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
       speechConfig: {
         languageCode: "fr-FR",
         voiceConfig: {
@@ -58,8 +62,11 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
           },
         },
       },
+      realtimeInputConfig: {
+        turnCoverage: TurnCoverage.TURN_INCLUDES_ALL_INPUT,
+      },
       tools: toolsForConfig,
-      systemInstruction: createSystemInstruction(), // Static system instruction
+      systemInstruction: systemIntruction, // Static system instruction
     }),
     []
   );
