@@ -7,6 +7,7 @@ import {
 import { RecipeProvider, useRecipeContext } from "@/contexts/recipe-context";
 import { AudioRecorder } from "@/lib/audio-recorder";
 import { useEffect, useState } from "react";
+import { Mic, Square, VolumeX } from "lucide-react";
 
 function Inside() {
   const { client, connected, connect, disconnect } = useLiveAPIContext();
@@ -45,7 +46,7 @@ function Inside() {
   const scale = 1 + (1 / 24) * (inVolume * 100);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col">
       {/* Logo at top */}
       <div className="text-center pt-8 pb-4">
         <div className="inline-flex items-center gap-3 mb-2">
@@ -72,7 +73,7 @@ function Inside() {
             }`}
           >
             <span className="text-white text-3xl sm:text-4xl z-10">
-              {connected ? "⏹️" : "🎤"}
+              {connected ? <Square size={32} /> : <Mic size={32} />}
             </span>
             <div
               style={{
@@ -107,7 +108,17 @@ function Inside() {
                 : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
             }`}
           >
-            {muted ? "🔇 Unmute" : "🎤 Mute"}
+            {muted ? (
+              <>
+                <VolumeX size={16} className="mr-2" />
+                Unmute
+              </>
+            ) : (
+              <>
+                <Mic size={16} className="mr-2" />
+                Mute
+              </>
+            )}
           </button>
         )}
 
