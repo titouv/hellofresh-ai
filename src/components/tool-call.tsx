@@ -57,6 +57,8 @@ function ToolCallComponent() {
   const [shownStep, setShownStep] = useState<
     RecipeScraped["steps"][number] | null
   >(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("");
   const { client } = useLiveAPIContext();
   const { recipe, setRecipe } = useRecipeContext();
 
@@ -128,10 +130,16 @@ function ToolCallComponent() {
         } else if (fc.name === searchAndSelectRecipeDeclaration.name) {
           console.log("Searching and selecting recipe", fc.args);
           const query = (fc.args as any).query;
+
+          setIsLoading(true);
+          setLoadingMessage(`Searching for "${query}"...`);
+
           try {
             const results = await searchRecipesServerFn(query);
             if (results.length > 0) {
               const selectedRecipe = results[0]; // Always select the first result
+              setLoadingMessage(`Loading recipe "${selectedRecipe.name}"...`);
+
               try {
                 const fullRecipe = await scrapeRecipeServerFn(
                   selectedRecipe.url
@@ -189,6 +197,9 @@ function ToolCallComponent() {
               id: fc.id || "",
               name: fc.name || "",
             });
+          } finally {
+            setIsLoading(false);
+            setLoadingMessage("");
           }
         }
       }
@@ -208,6 +219,39 @@ function ToolCallComponent() {
 
   const baseImageUrl =
     "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+        <div className="max-w-sm mx-auto p-4">
+          <div className="flex items-center justify-center gap-3">
+            <svg
+              className="animate-spin h-6 w-6 text-green-600"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <span className="text-sm text-gray-600">{loadingMessage}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!shownStep) {
     return null;
