@@ -189,36 +189,36 @@ export const searchRecipesServerFn = async (query: string) => {
       {
         name: "name",
         weight: 0.4,
-        getFn: (obj: any) => [obj.name, obj.normalizedName],
+        getFn: (obj: any) => obj.name,
       },
       {
         name: "headline",
         weight: 0.3,
-        getFn: (obj: any) => [obj.headline, obj.normalizedHeadline],
+        getFn: (obj: any) => obj.headline,
       },
-      {
-        name: "description",
-        weight: 0.2,
-        getFn: (obj: any) => [obj.description, obj.normalizedDescription],
-      },
-      {
-        name: "ingredients",
-        weight: 0.2,
-        getFn: (obj: any) => [
-          obj.ingredients?.map((ing: any) => ing.name).join(" "),
-          obj.normalizedIngredients,
-        ],
-      },
-      {
-        name: "tags",
-        weight: 0.15,
-        getFn: (obj: any) => [
-          obj.tags
-            ?.map((tag: any) => (typeof tag === "string" ? tag : tag.name))
-            .join(" "),
-          obj.normalizedTags,
-        ],
-      },
+      // {
+      //   name: "description",
+      //   weight: 0.2,
+      //   getFn: (obj: any) => [obj.description, obj.normalizedDescription],
+      // },
+      // {
+      //   name: "ingredients",
+      //   weight: 0.2,
+      //   getFn: (obj: any) => [
+      //     obj.ingredients?.map((ing: any) => ing.name).join(" "),
+      //     obj.normalizedIngredients,
+      //   ],
+      // },
+      // {
+      //   name: "tags",
+      //   weight: 0.15,
+      //   getFn: (obj: any) => [
+      //     obj.tags
+      //       ?.map((tag: any) => (typeof tag === "string" ? tag : tag.name))
+      //       .join(" "),
+      //     obj.normalizedTags,
+      //   ],
+      // },
       {
         name: "searchText",
         weight: 0.1,
