@@ -47,10 +47,10 @@ export interface Allergen {
   type: string;
   name: string;
   slug: string;
-  triggersTracesOf: boolean;
-  tracesOf: boolean;
-  iconPath?: null;
-  iconLink?: null;
+  triggersTracesOf?: boolean | null;
+  tracesOf?: boolean | null;
+  iconPath?: string | null;
+  iconLink?: string | null;
 }
 
 export interface WelcomeIngredient {
@@ -124,13 +124,5 @@ export interface Yield {
 export interface YieldIngredient {
   id: string;
   amount: number;
-  unit: Unit;
-}
-
-export enum Unit {
-  CS = "cs",
-  Cc = "cc",
-  G = "g",
-  PièceS = "pièce(s)",
-  SelonLEGoût = "selon le goût",
+  unit: string;
 }

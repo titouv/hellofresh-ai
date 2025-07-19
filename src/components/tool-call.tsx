@@ -8,6 +8,8 @@ import {
   scrapeRecipeServerFn,
   searchRecipesServerFn,
 } from "@/server_functions";
+import { fullRecipeToMarkdown } from "@/app/debug/page";
+import Markdown from "react-markdown";
 
 const renderStepDeclaration: FunctionDeclaration = {
   name: "render_step",
@@ -140,7 +142,14 @@ function ToolCallComponent() {
                   response: {
                     output: {
                       success: true,
-                      message: `Recette "${selectedRecipe.name}" trouvée et sélectionnée automatiquement`,
+                      message: `Recette "${
+                        selectedRecipe.name
+                      }" trouvée et sélectionnée automatiquement
+
+                      Voici la recette:
+                      ${fullRecipeToMarkdown(fullRecipe)}
+                      
+                      `,
                     },
                   },
                   id: fc.id || "",
@@ -199,6 +208,9 @@ function ToolCallComponent() {
     return null;
   }
 
+  console.log("JSON SHOWN STEP", shownStep);
+  console.log("JSON RECIPE", recipe);
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
       <div className="max-w-sm mx-auto p-4">
@@ -215,10 +227,9 @@ function ToolCallComponent() {
               Step {(recipe?.steps?.findIndex((s) => s === shownStep) || 0) + 1}
             </h4>
             <div
-              className="text-xs text-gray-600 line-clamp-2"
+              className="text-xs text-gray-600 prose"
               dangerouslySetInnerHTML={{
-                __html:
-                  shownStep?.instructionsHTML?.replace(/<[^>]*>/g, "") || "",
+                __html: shownStep?.instructionsHTML,
               }}
             />
           </div>
