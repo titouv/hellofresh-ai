@@ -8,7 +8,7 @@ import {
   scrapeRecipeServerFn,
   searchRecipesServerFn,
 } from "@/server_functions";
-import { fullRecipeToMarkdown } from "@/app/debug/page";
+import { fullRecipeToMarkdown } from "@/app/debug/utils";
 import Markdown from "react-markdown";
 
 const renderStepDeclaration: FunctionDeclaration = {

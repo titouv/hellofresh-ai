@@ -5,7 +5,7 @@ export interface RecipeScraped {
   canonical: string;
   clonedFrom: string;
   country: string;
-  createdAt: Date;
+  createdAt: string;
   cuisines: any[];
   description: string;
   descriptionHTML: string;
@@ -31,7 +31,7 @@ export interface RecipeScraped {
   steps: Step[];
   tags: Tag[];
   totalTime: string;
-  uniqueRecipeCode: null;
+  uniqueRecipeCode: string | null;
   utensils: Utensil[];
   uuid: null;
   yields: Yield[];
@@ -106,7 +106,7 @@ export interface Tag {
   slug: string;
   colorHandle: null | string;
   preferences: string[] | null;
-  displayLabel: null;
+  displayLabel: boolean | null;
 }
 
 export interface Utensil {
