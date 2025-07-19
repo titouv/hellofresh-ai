@@ -34,6 +34,16 @@ function Inside() {
     };
   }, [connected, client, muted, audioRecorder]);
 
+  const [maxVolumeReached, setMaxVolumeReached] = useState(0);
+
+  useEffect(() => {
+    if (inVolume > maxVolumeReached) {
+      setMaxVolumeReached(inVolume);
+    }
+  }, [inVolume]);
+
+  const scale = 1 + (1 / 24) * (inVolume * 100);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Logo at top */}
@@ -55,15 +65,21 @@ function Inside() {
         <div className="mb-8">
           <button
             onClick={() => (connected ? disconnect() : connect())}
-            className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 ${
+            className={`w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 relative ${
               connected
                 ? "bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 scale-105"
                 : "bg-gradient-to-br from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:scale-105"
             }`}
           >
-            <span className="text-white text-3xl sm:text-4xl">
+            <span className="text-white text-3xl sm:text-4xl z-10">
               {connected ? "⏹️" : "🎤"}
             </span>
+            <div
+              style={{
+                scale: scale,
+              }}
+              className="absolute top-0 left-0 w-full h-full rounded-full border-2 border-green-500 bg-green-500/20 opacity-50 "
+            ></div>
           </button>
         </div>
 
