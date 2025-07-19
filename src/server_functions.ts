@@ -21,23 +21,40 @@ interface RecipeFromSearch {
   tags: string[];
   url: string;
 }
-
 async function loadAllRecipes(): Promise<RecipeFromSearch[]> {
-  const localFile = fs.readFileSync(
-    path.join(process.cwd(), "./.cache/recipes.json"),
-    "utf8"
-  );
-  if (localFile) {
-    return JSON.parse(localFile);
+  try {
+    const localFile = fs.readFileSync(
+      path.join(process.cwd(), "./.cache/recipes.json"),
+      "utf8"
+    );
+    if (localFile) {
+      return JSON.parse(localFile);
+    }
+  } catch (err) {
+    // File doesn't exist or can't be read, continue to fetch
   }
+
   const url =
     "https://pub-c153d3d3306a4942aab1c0e687a18614.r2.dev/recipes.json";
   const response = await fetch(url);
   const data = await response.json();
-  fs.writeFileSync(
-    path.join(process.cwd(), "./.cache/recipes.json"),
-    JSON.stringify(data, null, 2)
-  );
+
+  try {
+    // Ensure .cache directory exists
+    const cacheDir = path.join(process.cwd(), ".cache");
+    if (!fs.existsSync(cacheDir)) {
+      fs.mkdirSync(cacheDir, { recursive: true });
+    }
+
+    fs.writeFileSync(
+      path.join(process.cwd(), "./.cache/recipes.json"),
+      JSON.stringify(data, null, 2)
+    );
+  } catch (err) {
+    // Failed to write cache file, but we can still return the data
+    console.warn("Failed to write recipes cache file:", err);
+  }
+
   return data;
 }
 
