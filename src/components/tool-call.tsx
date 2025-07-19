@@ -57,7 +57,7 @@ function ToolCallComponent() {
   const [shownStep, setShownStep] = useState<
     RecipeScraped["steps"][number] | null
   >(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const { client } = useLiveAPIContext();
   const { recipe, setRecipe } = useRecipeContext();
