@@ -75,12 +75,14 @@ function Inside() {
             <span className="text-white text-3xl sm:text-4xl z-10">
               {connected ? <Square size={32} /> : <Mic size={32} />}
             </span>
-            <div
-              style={{
-                scale: scale,
-              }}
-              className="absolute top-0 left-0 w-full h-full rounded-full border-2 border-green-500 bg-green-500/20 opacity-50 "
-            ></div>
+            {scale > 1 && (
+              <div
+                style={{
+                  scale: scale,
+                }}
+                className="absolute top-0 left-0 w-full h-full rounded-full border-2 border-green-500 bg-green-500/20 opacity-50 "
+              ></div>
+            )}
           </button>
         </div>
 
@@ -102,7 +104,7 @@ function Inside() {
         {connected && (
           <button
             onClick={() => setMuted(!muted)}
-            className={`px-6 py-3 rounded-full font-medium transition-all shadow-lg mb-6 ${
+            className={`px-6 py-3 rounded-full font-medium transition-all shadow-lg mb-6 flex items-center justify-center ${
               muted
                 ? "bg-red-500 hover:bg-red-600 text-white"
                 : "bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
