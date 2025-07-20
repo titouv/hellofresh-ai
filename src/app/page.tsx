@@ -171,7 +171,26 @@ export default function Home() {
   });
 
   if (!token) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center">
+        <div className="text-center">
+          <div className="inline-flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <span className="text-white text-xl font-bold">HF</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+              HelloFresh AI
+            </h1>
+          </div>
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
+          </div>
+          <p className="text-gray-600 text-sm mt-4">Connecting to your cooking companion...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!token.name) {
