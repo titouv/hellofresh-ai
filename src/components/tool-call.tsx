@@ -64,6 +64,19 @@ function ToolCallComponent() {
 
   useEffect(() => {
     const onToolCall = async (toolCall: LiveServerToolCall) => {
+      // Play sound when action starts
+      try {
+        const audio = new Audio(
+          "https://assets.mixkit.co/active_storage/sfx/2867/2867-preview.mp3"
+        );
+        audio.volume = 0.3;
+        audio.play().catch(() => {
+          // Ignore audio play errors (e.g., user hasn't interacted yet)
+        });
+      } catch (error) {
+        // Ignore any audio errors
+      }
+
       console.log("onToolCall", toolCall, { recipe });
       if (!toolCall.functionCalls) {
         return;
