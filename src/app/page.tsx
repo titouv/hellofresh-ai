@@ -75,7 +75,7 @@ function Inside() {
             <span className="text-white text-3xl sm:text-4xl z-10">
               {connected ? <Square size={32} /> : <Mic size={32} />}
             </span>
-            {scale > 1 && (
+            {parseFloat(scale.toFixed(2)) > 1.001 && (
               <div
                 style={{
                   scale: scale,
