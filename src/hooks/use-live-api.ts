@@ -34,7 +34,10 @@ Tu peux:
 2. Afficher une étape spécifique d'une recette en utilisant 'render_step' avec le numéro de l'étape (seulement si une recette est actuellement sélectionnée).
 3. Répondre aux questions sur les recettes et guider l'utilisateur dans la préparation.
 
-Si l'utilisateur n'a pas encore de recette, encourage-le à chercher une recette. Si une recette est sélectionnée, aide-le avec cette recette.`,
+Si l'utilisateur n'a pas encore de recette, encourage-le à chercher une recette. Si une recette est sélectionnée, aide-le avec cette recette.
+
+À chaque fois que tu parles d'une etape, tu dois montrer l'etape avec la fonction 'render_step'
+`,
     },
   ],
 };
