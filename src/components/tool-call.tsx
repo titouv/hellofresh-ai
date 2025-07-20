@@ -253,6 +253,31 @@ function ToolCallComponent() {
     );
   }
 
+  // Show recipe image when recipe is selected but no specific step is shown
+  if (!shownStep && recipe) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+        <div className="max-w-sm mx-auto p-4">
+          <div className="flex flex-col items-center gap-3 mb-3">
+            <div className="w-full h-48 rounded-xl overflow-hidden shadow-md mb-2">
+              <img
+                src={baseImageUrl + recipe.imagePath}
+                alt={recipe.name}
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="w-full">
+              <h4 className="font-medium text-gray-800 text-sm mb-1">
+                {recipe.name}
+              </h4>
+              <p className="text-xs text-gray-600 mb-2">{recipe.description}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!shownStep) {
     return null;
   }
