@@ -46,7 +46,7 @@ function Inside() {
   const scale = 1 + (1 / 24) * (inVolume * 100);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-[100dvh] flex flex-col">
       {/* Logo at top */}
       <div className="text-center pt-8 pb-4">
         <div className="inline-flex items-center gap-3 mb-2">
