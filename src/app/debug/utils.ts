@@ -19,7 +19,7 @@ export function fullRecipeToMarkdown(recipe: RecipeScraped) {
     .map((a) => a.name)
     .join(", ");
 
-  const yieldObject = recipe.yields[HARCODED_NUMBER_OF_PERSON];
+  const yieldObject = recipe.yields[HARCODED_NUMBER_OF_PERSON - 1];
 
   return `
 # ${recipe.name}
@@ -33,12 +33,29 @@ ${tracesAllergens ? `Peut contenir des traces de : ${tracesAllergens}` : ""}
 
 ## Ingrédients
 ${recipe.ingredients
-  .map(
-    (ingredient) =>
-      `- ${ingredient.name} ${
-        yieldObject.ingredients.find((i) => i.id === ingredient.id)?.amount
-      } ${yieldObject.ingredients.find((i) => i.id === ingredient.id)?.unit}`
-  )
+  .map((ingredient) => {
+    const amount = yieldObject.ingredients.find(
+      (i) => i.id === ingredient.id
+    )?.amount;
+    const unit = yieldObject.ingredients.find(
+      (i) => i.id === ingredient.id
+    )?.unit;
+
+    if (amount === 0) return `- ${ingredient.name} ${unit}`;
+
+    let displayAmount: string | undefined = amount?.toString();
+    if (amount && amount < 1) {
+      // Convert decimal to fraction
+      if (Math.abs(amount - 0.25) < 0.01) displayAmount = "1/4";
+      else if (Math.abs(amount - 0.33) < 0.01) displayAmount = "1/3";
+      else if (Math.abs(amount - 0.5) < 0.01) displayAmount = "1/2";
+      else if (Math.abs(amount - 0.66) < 0.01) displayAmount = "2/3";
+      else if (Math.abs(amount - 0.75) < 0.01) displayAmount = "3/4";
+      else displayAmount = amount?.toString(); // Round to 1 decimal otherwise
+    }
+
+    return `- ${ingredient.name} ${displayAmount} ${unit}`;
+  })
   .join("\n")}
 
 ## Instructions
