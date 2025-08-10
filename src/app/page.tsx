@@ -7,6 +7,7 @@ import {
 import { RecipeProvider, useRecipeContext } from "@/contexts/recipe-context";
 import { AudioRecorder } from "@/lib/audio-recorder";
 import { useEffect, useState } from "react";
+import { useWakeLock } from "@/hooks/use-wake-lock";
 import { Mic, Square, VolumeX } from "lucide-react";
 
 function Inside() {
@@ -15,6 +16,8 @@ function Inside() {
   const [audioRecorder] = useState(() => new AudioRecorder());
   const [muted, setMuted] = useState(false);
   const [inVolume, setInVolume] = useState(0);
+  // Keep screen awake while connected (recording session active)
+  useWakeLock(connected);
 
   useEffect(() => {
     const onData = (base64: string) => {
@@ -187,7 +190,9 @@ export default function Home() {
             <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
             <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
           </div>
-          <p className="text-gray-600 text-sm mt-4">Connecting to your cooking companion...</p>
+          <p className="text-gray-600 text-sm mt-4">
+            Connecting to your cooking companion...
+          </p>
         </div>
       </div>
     );
