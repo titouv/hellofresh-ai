@@ -7,7 +7,6 @@ import { RecipeScraped } from "../../recipe_types";
 import {
   scrapeRecipeServerFn,
   searchRecipesServerFn,
-  startTimerServerFn,
 } from "@/server_functions";
 import { fullRecipeToMarkdown } from "@/app/debug/utils";
 
@@ -234,50 +233,22 @@ function ToolCallComponent() {
         } else if (fc.name === startTimerDeclaration.name) {
           console.log("Starting timer", fc.args);
           const seconds = (fc.args as any).seconds;
-
-          try {
-            const result = await startTimerServerFn(seconds);
-            if (result.success) {
-              const timerId = startTimer(seconds, () => {
-                // Send message to AI when timer finishes
-                client.send({
-                  text: `RETOUR SYSTEME: Le timer s'est terminé, tu doois prévenir l'utilisateur que le timer s'est terminé`,
-                });
-              });
-              functionResponses.push({
-                response: {
-                  output: {
-                    success: true,
-                    message: `Timer started for ${seconds} seconds (Timer ID: ${timerId})`,
-                  },
-                },
-                id: fc.id || "",
-                name: fc.name || "",
-              });
-            } else {
-              functionResponses.push({
-                response: {
-                  output: {
-                    success: false,
-                    error: "Failed to start timer",
-                  },
-                },
-                id: fc.id || "",
-                name: fc.name || "",
-              });
-            }
-          } catch (error) {
-            functionResponses.push({
-              response: {
-                output: {
-                  success: false,
-                  error: "Failed to start timer",
-                },
-              },
-              id: fc.id || "",
-              name: fc.name || "",
+          const timerId = startTimer(seconds, () => {
+            // Send message to AI when timer finishes
+            client.send({
+              text: `RETOUR SYSTEME: Le timer s'est terminé, tu doois prévenir l'utilisateur que le timer s'est terminé`,
             });
-          }
+          });
+          functionResponses.push({
+            response: {
+              output: {
+                success: true,
+                message: `Timer started for ${seconds} seconds (Timer ID: ${timerId})`,
+              },
+            },
+            id: fc.id || "",
+            name: fc.name || "",
+          });
         }
       }
       console.log("functionResponses", functionResponses);
