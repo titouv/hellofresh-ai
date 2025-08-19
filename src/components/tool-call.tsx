@@ -238,7 +238,12 @@ function ToolCallComponent() {
           try {
             const result = await startTimerServerFn(seconds);
             if (result.success) {
-              const timerId = startTimer(seconds);
+              const timerId = startTimer(seconds, () => {
+                // Send message to AI when timer finishes
+                client.send({
+                  text: `RETOUR SYSTEME: Le timer s'est terminé, tu doois prévenir l'utilisateur que le timer s'est terminé`,
+                });
+              });
               functionResponses.push({
                 response: {
                   output: {

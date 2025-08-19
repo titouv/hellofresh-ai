@@ -8,12 +8,13 @@ interface Timer {
   remainingTime: number;
   isActive: boolean;
   startTime: number;
+  onFinish?: () => void;
 }
 
 interface TimerContextType {
   timers: Timer[];
   activeTimer: Timer | null;
-  startTimer: (duration: number) => string;
+  startTimer: (duration: number, onFinish?: () => void) => string;
   stopTimer: (id: string) => void;
   clearTimer: (id: string) => void;
 }
@@ -35,8 +36,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
             const remainingTime = Math.max(0, timer.duration - elapsed);
             
             if (remainingTime === 0) {
-              // Timer finished - play notification sound
+              // Timer finished - play notification sound and call onFinish callback
               playTimerSound();
+              if (timer.onFinish) {
+                timer.onFinish();
+              }
               return { ...timer, remainingTime: 0, isActive: false };
             }
             
@@ -89,7 +93,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const startTimer = (duration: number): string => {
+  const startTimer = (duration: number, onFinish?: () => void): string => {
     const id = Date.now().toString();
     const newTimer: Timer = {
       id,
@@ -97,6 +101,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       remainingTime: duration,
       isActive: true,
       startTime: Date.now(),
+      onFinish,
     };
 
     // Stop any existing active timer
