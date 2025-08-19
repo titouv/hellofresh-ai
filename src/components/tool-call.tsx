@@ -2,14 +2,14 @@ import { useEffect, useState, memo } from "react";
 import { FunctionDeclaration, LiveServerToolCall, Type } from "@google/genai";
 import { useLiveAPIContext } from "@/contexts/live-api-context";
 import { useRecipeContext } from "@/contexts/recipe-context";
+import { useTimerContext } from "@/contexts/timer-context";
 import { RecipeScraped } from "../../recipe_types";
-import { RecipeSearchResult, scrapeRecipe } from "../../scrape";
 import {
   scrapeRecipeServerFn,
   searchRecipesServerFn,
+  startTimerServerFn,
 } from "@/server_functions";
 import { fullRecipeToMarkdown } from "@/app/debug/utils";
-import Markdown from "react-markdown";
 
 const renderStepDeclaration: FunctionDeclaration = {
   name: "render_step",
@@ -43,12 +43,28 @@ const searchAndSelectRecipeDeclaration: FunctionDeclaration = {
   },
 };
 
+const startTimerDeclaration: FunctionDeclaration = {
+  name: "start_timer",
+  description: "Start a timer for a specified duration in seconds",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      seconds: {
+        type: Type.NUMBER,
+        description: "Duration of the timer in seconds",
+      },
+    },
+    required: ["seconds"],
+  },
+};
+
 export const toolsForConfig = [
   { googleSearch: {} },
   {
     functionDeclarations: [
       renderStepDeclaration,
       searchAndSelectRecipeDeclaration,
+      startTimerDeclaration,
     ],
   },
 ];
@@ -61,6 +77,7 @@ function ToolCallComponent() {
   const [loadingMessage, setLoadingMessage] = useState("");
   const { client } = useLiveAPIContext();
   const { recipe, setRecipe } = useRecipeContext();
+  const { startTimer } = useTimerContext();
 
   useEffect(() => {
     const onToolCall = async (toolCall: LiveServerToolCall) => {
@@ -214,6 +231,48 @@ function ToolCallComponent() {
             setIsLoading(false);
             setLoadingMessage("");
           }
+        } else if (fc.name === startTimerDeclaration.name) {
+          console.log("Starting timer", fc.args);
+          const seconds = (fc.args as any).seconds;
+
+          try {
+            const result = await startTimerServerFn(seconds);
+            if (result.success) {
+              const timerId = startTimer(seconds);
+              functionResponses.push({
+                response: {
+                  output: {
+                    success: true,
+                    message: `Timer started for ${seconds} seconds (Timer ID: ${timerId})`,
+                  },
+                },
+                id: fc.id || "",
+                name: fc.name || "",
+              });
+            } else {
+              functionResponses.push({
+                response: {
+                  output: {
+                    success: false,
+                    error: "Failed to start timer",
+                  },
+                },
+                id: fc.id || "",
+                name: fc.name || "",
+              });
+            }
+          } catch (error) {
+            functionResponses.push({
+              response: {
+                output: {
+                  success: false,
+                  error: "Failed to start timer",
+                },
+              },
+              id: fc.id || "",
+              name: fc.name || "",
+            });
+          }
         }
       }
       console.log("functionResponses", functionResponses);
@@ -228,7 +287,7 @@ function ToolCallComponent() {
     return () => {
       client.off("toolcall", onToolCall);
     };
-  }, [client, recipe, setRecipe]);
+  }, [client, recipe, setRecipe, startTimer]);
 
   const baseImageUrl =
     "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";

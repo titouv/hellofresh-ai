@@ -284,3 +284,11 @@ export const searchRecipesServerFn = async (query: string) => {
 export const scrapeRecipeServerFn = async (url: string) => {
   return scrapeRecipe(url);
 };
+
+export const startTimerServerFn = async (seconds: number) => {
+  return {
+    success: true,
+    duration: seconds,
+    message: `Timer started for ${seconds} seconds`,
+  };
+};

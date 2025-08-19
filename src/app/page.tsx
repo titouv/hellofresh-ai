@@ -160,6 +160,7 @@ function Inside() {
 }
 import { ToolCall } from "@/components/tool-call";
 import { TextInput } from "@/components/text-input";
+import { TimerDisplay } from "@/components/timer-display";
 import { useQuery } from "@tanstack/react-query";
 import { AuthToken } from "@google/genai";
 
@@ -214,6 +215,7 @@ export default function Home() {
           <Inside />
           <TextInput />
           <ToolCall />
+          <TimerDisplay />
         </div>
       </RecipeProvider>
     </LiveAPIProvider>

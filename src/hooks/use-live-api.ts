@@ -54,7 +54,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   // Static config that never changes to prevent re-renders
   const config: LiveConnectConfig = useMemo(
     () => ({
-      httpOptions: { apiVersion: "v1alpha" },
+      // httpOptions: { apiVersion: "v1alpha" },
       responseModalities: [Modality.AUDIO],
       // mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
       speechConfig: {
