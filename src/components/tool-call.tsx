@@ -4,10 +4,7 @@ import { useLiveAPIContext } from "@/contexts/live-api-context";
 import { useRecipeContext } from "@/contexts/recipe-context";
 import { useTimerContext } from "@/contexts/timer-context";
 import { RecipeScraped } from "../../recipe_types";
-import {
-  scrapeRecipeServerFn,
-  searchRecipesServerFn,
-} from "@/server_functions";
+import { scrapeRecipeServerFn } from "@/server_functions";
 import { fullRecipeToMarkdown } from "@/app/debug/utils";
 
 const renderStepDeclaration: FunctionDeclaration = {
@@ -75,7 +72,7 @@ function ToolCallComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const { client } = useLiveAPIContext();
-  const { recipe, setRecipe } = useRecipeContext();
+  const { recipe, setRecipe, searchRecipes, recipesReady } = useRecipeContext();
   const { startTimer } = useTimerContext();
 
   useEffect(() => {
@@ -83,7 +80,7 @@ function ToolCallComponent() {
       // Play sound when action starts
       try {
         const audio = new Audio(
-          "https://assets.mixkit.co/active_storage/sfx/2867/2867-preview.mp3"
+          "https://assets.mixkit.co/active_storage/sfx/2867/2867-preview.mp3",
         );
         audio.volume = 0.3;
         audio.play().catch(() => {
@@ -160,75 +157,92 @@ function ToolCallComponent() {
           console.log("Searching and selecting recipe", fc.args);
           const query = (fc.args as any).query;
 
-          setIsLoading(true);
-          setLoadingMessage(`Searching for "${query}"...`);
+          if (!recipesReady) {
+            functionResponses.push({
+              response: {
+                output: {
+                  success: false,
+                  error:
+                    "Recipe database is still loading. Please try again in a moment.",
+                },
+              },
+              id: fc.id || "",
+              name: fc.name || "",
+            });
+          } else {
+            setIsLoading(true);
+            setLoadingMessage(`Searching for "${query}"...`);
 
-          try {
-            const results = await searchRecipesServerFn(query);
-            if (results.length > 0) {
-              const selectedRecipe = results[0]; // Always select the first result
-              setLoadingMessage(`Loading recipe "${selectedRecipe.name}"...`);
+            try {
+              const results = searchRecipes(query);
+              if (results.length > 0) {
+                const selectedRecipe = results[0]; // Always select the first result
+                setLoadingMessage(`Loading recipe "${selectedRecipe.name}"...`);
 
-              try {
-                const fullRecipe = await scrapeRecipeServerFn(
-                  selectedRecipe.url
-                );
-                console.log("fullRecipe", fullRecipe);
-                setRecipe(fullRecipe);
+                try {
+                  const fullRecipe = await scrapeRecipeServerFn(
+                    selectedRecipe.url,
+                  );
+                  console.log("fullRecipe", fullRecipe);
+                  setRecipe(fullRecipe);
 
-                const message = `Recette "${
-                  selectedRecipe.name
-                }" trouvée et sélectionnée automatiquement
+                  const message = `Recette "${
+                    selectedRecipe.name
+                  }" trouvée et sélectionnée automatiquement
 
-                      Voici la recette:
-                      ${fullRecipeToMarkdown(fullRecipe)}
-                      
-                      `;
+                        Voici la recette:
+                        ${fullRecipeToMarkdown(fullRecipe)}
 
-                console.log("MESSAGE RETURNED TO USER", message);
+                        `;
 
+                  console.log("MESSAGE RETURNED TO USER", message);
+
+                  functionResponses.push({
+                    response: {
+                      output: {
+                        success: true,
+                        message: message,
+                      },
+                    },
+                    id: fc.id || "",
+                    name: fc.name || "",
+                  });
+                } catch (error) {
+                  functionResponses.push({
+                    response: {
+                      output: {
+                        success: false,
+                        error: "Failed to load recipe",
+                      },
+                    },
+                    id: fc.id || "",
+                    name: fc.name || "",
+                  });
+                }
+              } else {
                 functionResponses.push({
                   response: {
                     output: {
-                      success: true,
-                      message: message,
+                      success: false,
+                      error: "Aucune recette trouvée pour cette recherche",
                     },
                   },
                   id: fc.id || "",
                   name: fc.name || "",
                 });
-              } catch (error) {
-                functionResponses.push({
-                  response: {
-                    output: { success: false, error: "Failed to load recipe" },
-                  },
-                  id: fc.id || "",
-                  name: fc.name || "",
-                });
               }
-            } else {
+            } catch (error) {
               functionResponses.push({
                 response: {
-                  output: {
-                    success: false,
-                    error: "Aucune recette trouvée pour cette recherche",
-                  },
+                  output: { success: false, error: "Failed to search recipes" },
                 },
                 id: fc.id || "",
                 name: fc.name || "",
               });
+            } finally {
+              setIsLoading(false);
+              setLoadingMessage("");
             }
-          } catch (error) {
-            functionResponses.push({
-              response: {
-                output: { success: false, error: "Failed to search recipes" },
-              },
-              id: fc.id || "",
-              name: fc.name || "",
-            });
-          } finally {
-            setIsLoading(false);
-            setLoadingMessage("");
           }
         } else if (fc.name === startTimerDeclaration.name) {
           console.log("Starting timer", fc.args);
@@ -263,7 +277,7 @@ function ToolCallComponent() {
     return () => {
       client.off("toolcall", onToolCall);
     };
-  }, [client, recipe, setRecipe, startTimer]);
+  }, [client, recipe, setRecipe, startTimer, searchRecipes, recipesReady]);
 
   const baseImageUrl =
     "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";
