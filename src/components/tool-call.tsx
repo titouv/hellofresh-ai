@@ -1,5 +1,10 @@
 import { useEffect, useState, memo } from "react";
-import { FunctionDeclaration, LiveServerToolCall, Type } from "@google/genai";
+import {
+  Behavior,
+  FunctionDeclaration,
+  LiveServerToolCall,
+  Type,
+} from "@google/genai";
 import { useLiveAPIContext } from "@/contexts/live-api-context";
 import { useRecipeContext } from "@/contexts/recipe-context";
 import { useTimerContext } from "@/contexts/timer-context";
@@ -26,6 +31,7 @@ const searchAndSelectRecipeDeclaration: FunctionDeclaration = {
   name: "search_and_select_recipe",
   description:
     "Search for HelloFresh recipes and automatically select the first matching result",
+  behavior: Behavior.NON_BLOCKING,
   parameters: {
     type: Type.OBJECT,
     properties: {
