@@ -63,6 +63,24 @@ const startTimerDeclaration: FunctionDeclaration = {
   },
 };
 
+const showStepImageFullscreenDeclaration: FunctionDeclaration = {
+  name: "show_step_image_fullscreen",
+  description: "Show the current step image in fullscreen",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {},
+  },
+};
+
+const hideStepImageFullscreenDeclaration: FunctionDeclaration = {
+  name: "hide_step_image_fullscreen",
+  description: "Hide the fullscreen step image",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {},
+  },
+};
+
 export const toolsForConfig = [
   { googleSearch: {} },
   {
@@ -70,6 +88,8 @@ export const toolsForConfig = [
       renderStepDeclaration,
       searchAndSelectRecipeDeclaration,
       startTimerDeclaration,
+      showStepImageFullscreenDeclaration,
+      hideStepImageFullscreenDeclaration,
     ],
   },
 ];
@@ -80,9 +100,16 @@ function ToolCallComponent() {
   >(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
+  const [isStepImageFullscreen, setIsStepImageFullscreen] = useState(false);
   const { client } = useLiveAPIContext();
   const { recipe, setRecipe, searchRecipes, recipesReady } = useRecipeContext();
   const { startTimer } = useTimerContext();
+
+  useEffect(() => {
+    if (!shownStep) {
+      setIsStepImageFullscreen(false);
+    }
+  }, [shownStep]);
 
   useEffect(() => {
     const onToolCall = async (toolCall: LiveServerToolCall) => {
@@ -303,6 +330,43 @@ function ToolCallComponent() {
             id: fc.id || "",
             name: fc.name || "",
           });
+        } else if (fc.name === showStepImageFullscreenDeclaration.name) {
+          if (shownStep) {
+            setIsStepImageFullscreen(true);
+            functionResponses.push({
+              response: {
+                output: {
+                  success: true,
+                  message: "Step image shown fullscreen",
+                },
+              },
+              id: fc.id || "",
+              name: fc.name || "",
+            });
+          } else {
+            functionResponses.push({
+              response: {
+                output: {
+                  success: false,
+                  error: "No step image available to show fullscreen",
+                },
+              },
+              id: fc.id || "",
+              name: fc.name || "",
+            });
+          }
+        } else if (fc.name === hideStepImageFullscreenDeclaration.name) {
+          setIsStepImageFullscreen(false);
+          functionResponses.push({
+            response: {
+              output: {
+                success: true,
+                message: "Fullscreen step image hidden",
+              },
+            },
+            id: fc.id || "",
+            name: fc.name || "",
+          });
         }
       }
       console.log("functionResponses", functionResponses);
@@ -317,7 +381,7 @@ function ToolCallComponent() {
     return () => {
       client.off("toolcall", onToolCall);
     };
-  }, [client, recipe, setRecipe, startTimer, searchRecipes, recipesReady]);
+  }, [client, recipe, setRecipe, startTimer, searchRecipes, recipesReady, shownStep]);
 
   const baseImageUrl =
     "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";
@@ -384,17 +448,44 @@ function ToolCallComponent() {
     return null;
   }
 
+  const stepImageUrl =
+    baseImageUrl + (shownStep?.images?.[0]?.link || "");
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+      {isStepImageFullscreen && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
+          <button
+            onClick={() => setIsStepImageFullscreen(false)}
+            className="absolute top-4 right-4 text-white text-sm bg-black/50 px-3 py-1 rounded"
+          >
+            Close
+          </button>
+          <img
+            src={stepImageUrl}
+            alt="Recipe step fullscreen"
+            className="max-h-[90vh] max-w-[92vw] object-contain"
+          />
+        </div>
+      )}
       <div className="max-w-sm mx-auto p-4">
         <div className="flex flex-col items-center gap-3 mb-3">
-          <div className="w-full h-32 rounded-xl overflow-hidden shadow-md mb-2">
+          <div
+            className="w-full h-32 rounded-xl overflow-hidden shadow-md mb-2 cursor-zoom-in"
+            onClick={() => setIsStepImageFullscreen(true)}
+          >
             <img
-              src={baseImageUrl + (shownStep?.images?.[0]?.link || "")}
+              src={stepImageUrl}
               alt="Recipe step"
               className="w-full h-full object-cover"
             />
           </div>
+          <button
+            onClick={() => setIsStepImageFullscreen(true)}
+            className="text-xs text-blue-600 hover:text-blue-700"
+          >
+            View full screen
+          </button>
           <div className="w-full">
             <h4 className="font-medium text-gray-800 text-sm mb-1">
               Step {(recipe?.steps?.findIndex((s) => s === shownStep) || 0) + 1}
