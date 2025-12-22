@@ -13,7 +13,6 @@ interface Timer {
 
 interface TimerContextType {
   timers: Timer[];
-  activeTimer: Timer | null;
   startTimer: (duration: number, onFinish?: () => void) => string;
   stopTimer: (id: string) => void;
   clearTimer: (id: string) => void;
@@ -25,13 +24,13 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [timers, setTimers] = useState<Timer[]>([]);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const activeTimer = timers.find(timer => timer.isActive) || null;
+  const hasActiveTimers = timers.some(timer => timer.isActive);
 
   useEffect(() => {
-    if (activeTimer) {
+    if (hasActiveTimers) {
       intervalRef.current = setInterval(() => {
         setTimers(prev => prev.map(timer => {
-          if (timer.isActive && timer.id === activeTimer.id) {
+          if (timer.isActive) {
             const elapsed = Math.floor((Date.now() - timer.startTime) / 1000);
             const remainingTime = Math.max(0, timer.duration - elapsed);
             
@@ -61,7 +60,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         clearInterval(intervalRef.current);
       }
     };
-  }, [activeTimer?.id]);
+  }, [hasActiveTimers]);
 
   const playTimerSound = () => {
     try {
@@ -94,7 +93,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   };
 
   const startTimer = (duration: number, onFinish?: () => void): string => {
-    const id = Date.now().toString();
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const newTimer: Timer = {
       id,
       duration,
@@ -103,9 +102,6 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       startTime: Date.now(),
       onFinish,
     };
-
-    // Stop any existing active timer
-    setTimers(prev => prev.map(timer => ({ ...timer, isActive: false })));
     
     // Add new timer
     setTimers(prev => [...prev, newTimer]);
@@ -126,7 +122,6 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   return (
     <TimerContext.Provider value={{
       timers,
-      activeTimer,
       startTimer,
       stopTimer,
       clearTimer,
