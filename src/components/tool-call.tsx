@@ -102,7 +102,8 @@ function ToolCallComponent() {
   const [loadingMessage, setLoadingMessage] = useState("");
   const [isStepImageFullscreen, setIsStepImageFullscreen] = useState(false);
   const { client } = useLiveAPIContext();
-  const { recipe, setRecipe, searchRecipes, recipesReady } = useRecipeContext();
+  const { recipe, setRecipe, servingSize, searchRecipes, recipesReady } =
+    useRecipeContext();
   const { startTimer } = useTimerContext();
 
   useEffect(() => {
@@ -247,7 +248,10 @@ function ToolCallComponent() {
                 }" trouvée et sélectionnée automatiquement
 
                         Voici la recette:
-                        ${fullRecipeToMarkdown(fullRecipe)}
+                        ${fullRecipeToMarkdown(
+                          fullRecipe,
+                          servingSize ?? undefined,
+                        )}
 
                         `;
 

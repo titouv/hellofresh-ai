@@ -19,6 +19,8 @@ export interface CookingHistoryItem {
 interface RecipeContextType {
   recipe: RecipeScraped | null;
   setRecipe: (recipe: RecipeScraped | null) => void;
+  servingSize: number | null;
+  setServingSize: (size: number | null) => void;
   searchRecipes: (query: string) => RecipeSearchResult[];
   recipesLoading: boolean;
   recipesError: string | null;
@@ -31,6 +33,7 @@ const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
 
 export function RecipeProvider({ children }: { children: ReactNode }) {
   const [recipe, setRecipe] = useState<RecipeScraped | null>(null);
+  const [servingSize, setServingSize] = useState<number | null>(null);
   const [cookingHistory, setCookingHistory] = useState<CookingHistoryItem[]>(
     [],
   );
@@ -59,6 +62,38 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!recipe) {
       return;
+    }
+    if (Number.isFinite(servingSize)) {
+      if (recipe.yields && recipe.yields.length > 0) {
+        const match = recipe.yields.find((y) => y.yields === servingSize);
+        if (match) {
+          return;
+        }
+        const closest = recipe.yields.reduce((closestYield, currentYield) => {
+          const closestDiff = Math.abs(closestYield.yields - servingSize);
+          const currentDiff = Math.abs(currentYield.yields - servingSize);
+          return currentDiff < closestDiff ? currentYield : closestYield;
+        }, recipe.yields[0]);
+        setServingSize(closest.yields);
+        return;
+      }
+      return;
+    }
+    if (recipe.yields && recipe.yields.length > 0) {
+      const target = recipe.servingSize;
+      const exactMatch = recipe.yields.find((y) => y.yields === target);
+      if (exactMatch) {
+        setServingSize(exactMatch.yields);
+      } else {
+        const closest = recipe.yields.reduce((closestYield, currentYield) => {
+          const closestDiff = Math.abs(closestYield.yields - target);
+          const currentDiff = Math.abs(currentYield.yields - target);
+          return currentDiff < closestDiff ? currentYield : closestYield;
+        }, recipe.yields[0]);
+        setServingSize(closest.yields);
+      }
+    } else {
+      setServingSize(null);
     }
     const newEntry: CookingHistoryItem = {
       id: recipe.id || recipe.recipeId,
@@ -101,6 +136,8 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
       value={{
         recipe,
         setRecipe,
+        servingSize,
+        setServingSize,
         searchRecipes,
         recipesLoading,
         recipesError,

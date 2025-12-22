@@ -6,9 +6,35 @@ function htmlToMarkdown(html: string) {
   return turndownService.turndown(html);
 }
 
-const HARCODED_NUMBER_OF_PERSON = 5;
+function selectYieldForServingSize(
+  recipe: RecipeScraped,
+  servingSize?: number,
+) {
+  if (!recipe.yields || recipe.yields.length === 0) {
+    return null;
+  }
 
-export function fullRecipeToMarkdown(recipe: RecipeScraped) {
+  const target = servingSize ?? recipe.servingSize;
+  if (Number.isFinite(target)) {
+    const exactMatch = recipe.yields.find((y) => y.yields === target);
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    return recipe.yields.reduce((closest, current) => {
+      const closestDiff = Math.abs(closest.yields - target);
+      const currentDiff = Math.abs(current.yields - target);
+      return currentDiff < closestDiff ? current : closest;
+    }, recipe.yields[0]);
+  }
+
+  return recipe.yields[0];
+}
+
+export function fullRecipeToMarkdown(
+  recipe: RecipeScraped,
+  servingSize?: number,
+) {
   const allergensList = recipe.allergens
     .filter((a) => !a.tracesOf) // Filter out trace allergens
     .map((a) => a.name)
@@ -19,7 +45,10 @@ export function fullRecipeToMarkdown(recipe: RecipeScraped) {
     .map((a) => a.name)
     .join(", ");
 
-  const yieldObject = recipe.yields[HARCODED_NUMBER_OF_PERSON - 1];
+  const yieldObject = selectYieldForServingSize(recipe, servingSize);
+  const yieldIngredients = new Map(
+    yieldObject?.ingredients.map((ingredient) => [ingredient.id, ingredient]),
+  );
 
   return `
 # ${recipe.name}
@@ -34,12 +63,9 @@ ${tracesAllergens ? `Peut contenir des traces de : ${tracesAllergens}` : ""}
 ## Ingrédients
 ${recipe.ingredients
   .map((ingredient) => {
-    const amount = yieldObject.ingredients.find(
-      (i) => i.id === ingredient.id,
-    )?.amount;
-    const unit = yieldObject.ingredients.find(
-      (i) => i.id === ingredient.id,
-    )?.unit;
+    const yieldIngredient = yieldIngredients.get(ingredient.id);
+    const amount = yieldIngredient?.amount;
+    const unit = yieldIngredient?.unit;
 
     if (amount === 0) return `- ${ingredient.name} ${unit}`;
 

@@ -20,6 +20,8 @@ function Inside() {
   const {
     recipe,
     setRecipe,
+    servingSize,
+    setServingSize,
     recipesLoading,
     recipesError,
     recipesReady,
@@ -32,6 +34,7 @@ function Inside() {
   const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const lastAnnouncedRecipeId = useRef<string | null>(null);
+  const servingOptions = [2, 3, 4, 5, 6];
   // Keep screen awake while connected (recording session active)
   useWakeLock(connected);
 
@@ -72,8 +75,11 @@ function Inside() {
     }
     lastAnnouncedRecipeId.current = nextId;
     if (recipe) {
+      const servingsNote = Number.isFinite(servingSize)
+        ? ` Portions: ${servingSize}.`
+        : "";
       client.send({
-        text: `RETOUR SYSTEME: Recette sélectionnée "${recipe.name}". Description: ${recipe.description}.`,
+        text: `RETOUR SYSTEME: Recette sélectionnée "${recipe.name}". Description: ${recipe.description}.${servingsNote}`,
       });
     } else {
       client.send({
@@ -185,6 +191,30 @@ function Inside() {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 pb-8">
+        {/* Serving size pre-selection */}
+        {!recipe && (
+          <div className="text-center mb-6">
+            <p className="text-xs font-medium text-gray-500 mb-2">
+              Combien de personnes pour cette recette ?
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {servingOptions.map((option) => (
+                <button
+                  key={option}
+                  onClick={() => setServingSize(option)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    servingSize === option
+                      ? "bg-green-600 border-green-600 text-white"
+                      : "bg-white border-gray-200 text-gray-600 hover:border-green-300 hover:text-green-700"
+                  }`}
+                >
+                  {option} pers.
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Big mic button in center */}
         <div className="mb-8">
           <button
@@ -273,6 +303,11 @@ function Inside() {
               {recipe.name}
             </h2>
             <p className="text-gray-600 text-sm mb-3">{recipe.description}</p>
+            {Number.isFinite(servingSize) && (
+              <p className="text-xs text-gray-500 mb-3">
+                Portions sélectionnées: {servingSize} pers.
+              </p>
+            )}
             <button
               onClick={() => setRecipe(null)}
               className="text-sm text-green-600 hover:text-green-700 bg-green-50 px-4 py-2 rounded-full transition-colors"
