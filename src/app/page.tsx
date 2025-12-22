@@ -4,11 +4,16 @@ import {
   LiveAPIProvider,
   useLiveAPIContext,
 } from "@/contexts/live-api-context";
-import { RecipeProvider, useRecipeContext } from "@/contexts/recipe-context";
+import {
+  CookingHistoryItem,
+  RecipeProvider,
+  useRecipeContext,
+} from "@/contexts/recipe-context";
 import { AudioRecorder } from "@/lib/audio-recorder";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 import { Mic, Square, VolumeX } from "lucide-react";
+import { scrapeRecipeServerFn } from "@/server_functions";
 
 function Inside() {
   const { client, connected, connect, disconnect } = useLiveAPIContext();
@@ -24,6 +29,9 @@ function Inside() {
   const [audioRecorder] = useState(() => new AudioRecorder());
   const [muted, setMuted] = useState(false);
   const [inVolume, setInVolume] = useState(0);
+  const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const lastAnnouncedRecipeId = useRef<string | null>(null);
   // Keep screen awake while connected (recording session active)
   useWakeLock(connected);
 
@@ -54,6 +62,26 @@ function Inside() {
     }
   }, [inVolume]);
 
+  useEffect(() => {
+    if (!connected) {
+      return;
+    }
+    const nextId = recipe?.id || recipe?.recipeId || null;
+    if (nextId === lastAnnouncedRecipeId.current) {
+      return;
+    }
+    lastAnnouncedRecipeId.current = nextId;
+    if (recipe) {
+      client.send({
+        text: `RETOUR SYSTEME: Recette sélectionnée "${recipe.name}". Description: ${recipe.description}.`,
+      });
+    } else {
+      client.send({
+        text: "RETOUR SYSTEME: Aucune recette sélectionnée.",
+      });
+    }
+  }, [client, connected, recipe]);
+
   const scale = 1 + (1 / 24) * (inVolume * 100);
   const baseImageUrl =
     "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";
@@ -69,6 +97,28 @@ function Inside() {
       hour: "numeric",
       minute: "2-digit",
     }).format(cookedDate);
+  };
+
+  const handleStartFromHistory = async (item: CookingHistoryItem) => {
+    if (!item.url || historyLoadingId) {
+      setHistoryError(
+        item.url
+          ? "Another recipe is loading. Please wait."
+          : "Missing recipe link for this entry.",
+      );
+      return;
+    }
+    setHistoryError(null);
+    setHistoryLoadingId(item.id);
+    try {
+      const fullRecipe = await scrapeRecipeServerFn(item.url);
+      setRecipe(fullRecipe);
+    } catch (error) {
+      console.warn("Failed to load recipe from history:", error);
+      setHistoryError("Failed to load that recipe.");
+    } finally {
+      setHistoryLoadingId(null);
+    }
   };
 
   return (
@@ -245,6 +295,11 @@ function Inside() {
                 Clear
               </button>
             </div>
+            {historyError && (
+              <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                {historyError}
+              </div>
+            )}
             <div className="space-y-2">
               {cookingHistory.map((item) => (
                 <div
@@ -273,6 +328,19 @@ function Inside() {
                       {formatCookedAt(item.cookedAt)}
                     </p>
                   </div>
+                  <button
+                    onClick={() => handleStartFromHistory(item)}
+                    disabled={!item.url || historyLoadingId === item.id}
+                    className={`ml-auto text-xs px-3 py-1 rounded-full border transition-colors ${
+                      !item.url
+                        ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                        : historyLoadingId === item.id
+                          ? "border-green-200 text-green-700 bg-green-50"
+                          : "border-green-500 text-green-700 hover:bg-green-50"
+                    }`}
+                  >
+                    {historyLoadingId === item.id ? "Starting..." : "Start"}
+                  </button>
                 </div>
               ))}
             </div>

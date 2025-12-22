@@ -12,6 +12,7 @@ export interface CookingHistoryItem {
   name: string;
   description: string;
   imagePath: string;
+  url?: string;
   cookedAt: string;
 }
 
@@ -64,6 +65,7 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
       name: recipe.name,
       description: recipe.description,
       imagePath: recipe.imagePath,
+      url: recipe.websiteUrl || recipe.canonicalLink || recipe.canonical,
       cookedAt: new Date().toISOString(),
     };
     setCookingHistory((prev) => {
