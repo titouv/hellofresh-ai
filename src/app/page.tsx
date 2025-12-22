@@ -12,8 +12,15 @@ import { Mic, Square, VolumeX } from "lucide-react";
 
 function Inside() {
   const { client, connected, connect, disconnect } = useLiveAPIContext();
-  const { recipe, setRecipe, recipesLoading, recipesError, recipesReady } =
-    useRecipeContext();
+  const {
+    recipe,
+    setRecipe,
+    recipesLoading,
+    recipesError,
+    recipesReady,
+    cookingHistory,
+    clearCookingHistory,
+  } = useRecipeContext();
   const [audioRecorder] = useState(() => new AudioRecorder());
   const [muted, setMuted] = useState(false);
   const [inVolume, setInVolume] = useState(0);
@@ -48,6 +55,21 @@ function Inside() {
   }, [inVolume]);
 
   const scale = 1 + (1 / 24) * (inVolume * 100);
+  const baseImageUrl =
+    "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";
+
+  const formatCookedAt = (value: string) => {
+    const cookedDate = new Date(value);
+    if (Number.isNaN(cookedDate.getTime())) {
+      return "Recently cooked";
+    }
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(cookedDate);
+  };
 
   return (
     <div className="min-h-[100dvh] flex flex-col">
@@ -207,6 +229,53 @@ function Inside() {
             >
               Choose different recipe
             </button>
+          </div>
+        )}
+
+        {cookingHistory.length > 0 && (
+          <div className="w-full max-w-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">
+                Cooking history
+              </h3>
+              <button
+                onClick={clearCookingHistory}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                Clear
+              </button>
+            </div>
+            <div className="space-y-2">
+              {cookingHistory.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg p-2 shadow-sm"
+                >
+                  <div className="w-14 h-14 rounded-md overflow-hidden bg-gray-100 shrink-0">
+                    {item.imagePath ? (
+                      <img
+                        src={baseImageUrl + item.imagePath}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {item.name}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {item.description}
+                    </p>
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      {formatCookedAt(item.cookedAt)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
