@@ -6,6 +6,74 @@ import Fuse from "fuse.js";
 import path from "path";
 import fs from "fs";
 
+const RECIPES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const LIVE_SEARCH_TTL_MS = 10 * 60 * 1000;
+
+type LiveSearchCacheEntry = {
+  timestamp: number;
+  results: RecipeSearchResult[];
+};
+
+const liveSearchCache: Map<string, LiveSearchCacheEntry> =
+  (globalThis as any).__liveSearchCache ?? new Map();
+(globalThis as any).__liveSearchCache = liveSearchCache;
+
+function extractQueryFromMaybeUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    const searchParam = parsed.searchParams.get("search");
+    if (searchParam) return searchParam.trim();
+  } catch {
+    // Not a URL, continue with raw text
+  }
+  return trimmed;
+}
+
+function deaccentAndNormalize(text: string): string {
+  return text
+    .replace(/œ/g, "oe")
+    .replace(/Œ/g, "OE")
+    .replace(/æ/g, "ae")
+    .replace(/Æ/g, "AE")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function generateQueryVariants(input: string): string[] {
+  const cleaned = input.trim().replace(/\s+/g, " ");
+  const variants = new Set<string>();
+  if (!cleaned) return [];
+
+  variants.add(cleaned);
+  variants.add(deaccentAndNormalize(cleaned));
+
+  const tokens = cleaned.split(" ");
+  tokens.forEach((token, index) => {
+    const lower = token.toLowerCase();
+    if (lower.length <= 4) return;
+
+    if (lower.endsWith("s") && !lower.endsWith("ss")) {
+      const singular = token.slice(0, -1);
+      const next = [...tokens];
+      next[index] = singular;
+      variants.add(next.join(" "));
+    } else if (!lower.endsWith("s")) {
+      const plural = `${token}s`;
+      const next = [...tokens];
+      next[index] = plural;
+      variants.add(next.join(" "));
+    }
+  });
+
+  Array.from(variants).forEach((variant) => {
+    variants.add(deaccentAndNormalize(variant));
+  });
+
+  return Array.from(variants).slice(0, 12);
+}
+
 interface RecipeFromSearch {
   id: string;
   name: string;
@@ -22,13 +90,22 @@ interface RecipeFromSearch {
   url: string;
 }
 async function loadAllRecipes(): Promise<RecipeFromSearch[]> {
+  const cachePath = path.join(process.cwd(), "./.cache/recipes.json");
+  let staleData: RecipeFromSearch[] | null = null;
   try {
-    const localFile = fs.readFileSync(
-      path.join(process.cwd(), "./.cache/recipes.json"),
-      "utf8"
-    );
+    const stats = fs.statSync(cachePath);
+    const ageMs = Date.now() - stats.mtimeMs;
+    const localFile = fs.readFileSync(cachePath, "utf8");
     if (localFile) {
-      return JSON.parse(localFile);
+      staleData = JSON.parse(localFile);
+      if (ageMs < RECIPES_CACHE_TTL_MS) {
+        console.log(
+          `🟢 recipes cache hit (server file, age ${Math.round(
+            ageMs / 1000,
+          )}s)`,
+        );
+        return staleData;
+      }
     }
   } catch (err) {
     // File doesn't exist or can't be read, continue to fetch
@@ -36,8 +113,19 @@ async function loadAllRecipes(): Promise<RecipeFromSearch[]> {
 
   const url =
     "https://pub-c153d3d3306a4942aab1c0e687a18614.r2.dev/recipes.json";
-  const response = await fetch(url);
-  const data = await response.json();
+  let data;
+  try {
+    console.log("🔵 recipes cache miss, fetching remote dataset");
+    const response = await fetch(url);
+    data = await response.json();
+  } catch (err) {
+    if (staleData) {
+      console.warn("🟡 remote fetch failed, using stale server cache", err);
+      return staleData;
+    }
+    console.error("🔴 remote fetch failed and no server cache available", err);
+    throw err;
+  }
 
   try {
     // Ensure .cache directory exists
@@ -46,10 +134,7 @@ async function loadAllRecipes(): Promise<RecipeFromSearch[]> {
       fs.mkdirSync(cacheDir, { recursive: true });
     }
 
-    fs.writeFileSync(
-      path.join(process.cwd(), "./.cache/recipes.json"),
-      JSON.stringify(data, null, 2)
-    );
+    fs.writeFileSync(cachePath, JSON.stringify(data, null, 2));
   } catch (err) {
     // Failed to write cache file, but we can still return the data
     console.warn("Failed to write recipes cache file:", err);
@@ -162,7 +247,7 @@ export const searchRecipesServerFn = async (query: string) => {
       .join(" "),
     normalizedTags: (recipe.tags || [])
       .map((tag: any) =>
-        normalizeText(typeof tag === "string" ? tag : tag.name || "")
+        normalizeText(typeof tag === "string" ? tag : tag.name || ""),
       )
       .join(" "),
     // Convert to RecipeSearchResult format
@@ -256,7 +341,7 @@ export const searchRecipesServerFn = async (query: string) => {
   });
 
   const finalResults = Array.from(uniqueResults.values()).sort(
-    (a, b) => (a.score || 1) - (b.score || 1)
+    (a, b) => (a.score || 1) - (b.score || 1),
   );
 
   console.log(`Found ${finalResults.length} fuzzy matches`);
@@ -272,7 +357,7 @@ export const searchRecipesServerFn = async (query: string) => {
           ?.slice(0, 2)
           .map((m: any) => `${m.key}: ${m.value}`)
           .join(", ") || "N/A",
-    }))
+    })),
   );
 
   // Return results sorted by score (best matches first)
@@ -283,4 +368,38 @@ export const searchRecipesServerFn = async (query: string) => {
 
 export const scrapeRecipeServerFn = async (url: string) => {
   return scrapeRecipe(url);
+};
+
+export const searchRecipesLiveServerFn = async (query: string) => {
+  const trimmedQuery = extractQueryFromMaybeUrl(query);
+  if (!trimmedQuery) return [];
+
+  const cacheKey = normalizeText(trimmedQuery);
+  // const cached = liveSearchCache.get(cacheKey);
+  // if (cached && Date.now() - cached.timestamp < LIVE_SEARCH_TTL_MS) {
+  //   console.log(
+  //     `🟢 live search cache hit (server memory, query "${trimmedQuery}")`,
+  //   );
+  //   return cached.results;
+  // }
+
+  const variants = generateQueryVariants(trimmedQuery);
+  console.log(
+    `🔵 live search fetch (query "${trimmedQuery}", ${variants.length} variants)`,
+  );
+
+  let results: RecipeSearchResult[] = [];
+  for (const variant of variants) {
+    console.log(`🔍 live search try: "${variant}"`);
+    results = await searchRecipes(variant);
+    if (results.length > 0) {
+      console.log(
+        `🟢 live search match (${results.length} results) on "${variant}"`,
+      );
+      break;
+    }
+  }
+
+  liveSearchCache.set(cacheKey, { timestamp: Date.now(), results });
+  return results;
 };

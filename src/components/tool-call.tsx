@@ -9,7 +9,10 @@ import { useLiveAPIContext } from "@/contexts/live-api-context";
 import { useRecipeContext } from "@/contexts/recipe-context";
 import { useTimerContext } from "@/contexts/timer-context";
 import { RecipeScraped } from "../../recipe_types";
-import { scrapeRecipeServerFn } from "@/server_functions";
+import {
+  scrapeRecipeServerFn,
+  searchRecipesLiveServerFn,
+} from "@/server_functions";
 import { fullRecipeToMarkdown } from "@/app/debug/utils";
 
 const renderStepDeclaration: FunctionDeclaration = {
@@ -163,92 +166,123 @@ function ToolCallComponent() {
           console.log("Searching and selecting recipe", fc.args);
           const query = (fc.args as any).query;
 
-          if (!recipesReady) {
-            functionResponses.push({
-              response: {
-                output: {
-                  success: false,
-                  error:
-                    "Recipe database is still loading. Please try again in a moment.",
-                },
-              },
-              id: fc.id || "",
-              name: fc.name || "",
-            });
-          } else {
-            setIsLoading(true);
-            setLoadingMessage(`Searching for "${query}"...`);
+          setIsLoading(true);
+          setLoadingMessage(`Searching for "${query}"...`);
+
+          try {
+            let results = [];
 
             try {
-              const results = searchRecipes(query);
+              console.log(`🔵 [frontend] live search start: "${query}"`);
+              setLoadingMessage(`Searching live for "${query}"...`);
+              const liveResults = await searchRecipesLiveServerFn(query);
+              if (liveResults.length > 0) {
+                console.log(
+                  `🟢 [frontend] live search hit (${liveResults.length} results)`,
+                );
+                results = liveResults;
+              } else {
+                console.log("🟡 [frontend] live search returned 0 results");
+              }
+            } catch (error) {
+              console.warn(
+                "🟠 [frontend] live search failed, falling back to cache.",
+                error,
+              );
+            }
+
+            if (results.length === 0 && recipesReady) {
+              console.log(`🔵 [frontend] cached search start: "${query}"`);
+              setLoadingMessage(`Searching cached recipes for "${query}"...`);
+              results = searchRecipes(query);
               if (results.length > 0) {
-                const selectedRecipe = results[0]; // Always select the first result
-                setLoadingMessage(`Loading recipe "${selectedRecipe.name}"...`);
+                console.log(
+                  `🟢 [frontend] cached search hit (${results.length} results)`,
+                );
+              } else {
+                console.log("🟡 [frontend] cached search returned 0 results");
+              }
+            }
 
-                try {
-                  const fullRecipe = await scrapeRecipeServerFn(
-                    selectedRecipe.url,
-                  );
-                  console.log("fullRecipe", fullRecipe);
-                  setRecipe(fullRecipe);
+            if (results.length > 0) {
+              const selectedRecipe = results[0]; // Always select the first result
+              setLoadingMessage(`Loading recipe "${selectedRecipe.name}"...`);
 
-                  const message = `Recette "${
-                    selectedRecipe.name
-                  }" trouvée et sélectionnée automatiquement
+              try {
+                const fullRecipe = await scrapeRecipeServerFn(
+                  selectedRecipe.url,
+                );
+                console.log("fullRecipe", fullRecipe);
+                setRecipe(fullRecipe);
+
+                const message = `Recette "${
+                  selectedRecipe.name
+                }" trouvée et sélectionnée automatiquement
 
                         Voici la recette:
                         ${fullRecipeToMarkdown(fullRecipe)}
 
                         `;
 
-                  console.log("MESSAGE RETURNED TO USER", message);
+                console.log("MESSAGE RETURNED TO USER", message);
 
-                  functionResponses.push({
-                    response: {
-                      output: {
-                        success: true,
-                        message: message,
-                      },
+                functionResponses.push({
+                  response: {
+                    output: {
+                      success: true,
+                      message: message,
                     },
-                    id: fc.id || "",
-                    name: fc.name || "",
-                  });
-                } catch (error) {
-                  functionResponses.push({
-                    response: {
-                      output: {
-                        success: false,
-                        error: "Failed to load recipe",
-                      },
-                    },
-                    id: fc.id || "",
-                    name: fc.name || "",
-                  });
-                }
-              } else {
+                  },
+                  id: fc.id || "",
+                  name: fc.name || "",
+                });
+              } catch (error) {
                 functionResponses.push({
                   response: {
                     output: {
                       success: false,
-                      error: "Aucune recette trouvée pour cette recherche",
+                      error: "Failed to load recipe",
                     },
                   },
                   id: fc.id || "",
                   name: fc.name || "",
                 });
               }
-            } catch (error) {
+            } else if (!recipesReady) {
               functionResponses.push({
                 response: {
-                  output: { success: false, error: "Failed to search recipes" },
+                  output: {
+                    success: false,
+                    error:
+                      "Recipe database is still loading. Please try again in a moment.",
+                  },
                 },
                 id: fc.id || "",
                 name: fc.name || "",
               });
-            } finally {
-              setIsLoading(false);
-              setLoadingMessage("");
+            } else {
+              functionResponses.push({
+                response: {
+                  output: {
+                    success: false,
+                    error: "Aucune recette trouvée pour cette recherche",
+                  },
+                },
+                id: fc.id || "",
+                name: fc.name || "",
+              });
             }
+          } catch (error) {
+            functionResponses.push({
+              response: {
+                output: { success: false, error: "Failed to search recipes" },
+              },
+              id: fc.id || "",
+              name: fc.name || "",
+            });
+          } finally {
+            setIsLoading(false);
+            setLoadingMessage("");
           }
         } else if (fc.name === startTimerDeclaration.name) {
           console.log("Starting timer", fc.args);

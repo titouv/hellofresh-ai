@@ -28,6 +28,7 @@ export interface RecipeSearchResult {
 
 export async function searchRecipes(query: string) {
   const url = `https://hfresh.info/fr-fr?search=${encodeURIComponent(query)}`;
+  console.log(`searchRecipes`, url.toString());
   const response = await fetch(url);
   const html = await response.text();
 
