@@ -8,6 +8,7 @@ import {
 import { useLiveAPIContext } from "@/contexts/live-api-context";
 import { useRecipeContext } from "@/contexts/recipe-context";
 import { useTimerContext } from "@/contexts/timer-context";
+import { RecipeSearchResult } from "@/hooks/use-recipe-search";
 import { RecipeScraped } from "../../recipe_types";
 import {
   scrapeRecipeServerFn,
@@ -198,7 +199,7 @@ function ToolCallComponent() {
           setLoadingMessage(`Searching for "${query}"...`);
 
           try {
-            let results = [];
+            let results: RecipeSearchResult[] = [];
 
             try {
               console.log(`🔵 [frontend] live search start: "${query}"`);

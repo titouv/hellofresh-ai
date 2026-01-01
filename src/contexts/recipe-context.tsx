@@ -63,7 +63,7 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
     if (!recipe) {
       return;
     }
-    if (Number.isFinite(servingSize)) {
+    if (typeof servingSize === "number" && Number.isFinite(servingSize)) {
       if (recipe.yields && recipe.yields.length > 0) {
         const match = recipe.yields.find((y) => y.yields === servingSize);
         if (match) {

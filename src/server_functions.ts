@@ -97,14 +97,17 @@ async function loadAllRecipes(): Promise<RecipeFromSearch[]> {
     const ageMs = Date.now() - stats.mtimeMs;
     const localFile = fs.readFileSync(cachePath, "utf8");
     if (localFile) {
-      staleData = JSON.parse(localFile);
-      if (ageMs < RECIPES_CACHE_TTL_MS) {
-        console.log(
-          `🟢 recipes cache hit (server file, age ${Math.round(
-            ageMs / 1000,
-          )}s)`,
-        );
-        return staleData;
+      const parsed = JSON.parse(localFile);
+      if (Array.isArray(parsed)) {
+        staleData = parsed;
+        if (ageMs < RECIPES_CACHE_TTL_MS) {
+          console.log(
+            `🟢 recipes cache hit (server file, age ${Math.round(
+              ageMs / 1000,
+            )}s)`,
+          );
+          return staleData;
+        }
       }
     }
   } catch (err) {
