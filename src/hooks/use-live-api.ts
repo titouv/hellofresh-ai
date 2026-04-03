@@ -49,7 +49,8 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   const [model, setModel] = useState<string>(
     // "models/gemini-2.5-flash-preview-native-audio-dialog"
     // "models/gemini-2.0-flash-live-001"
-    "models/gemini-2.5-flash-native-audio-preview-12-2025",
+    // "models/gemini-2.5-flash-native-audio-preview-12-2025",
+    "models/gemini-3.1-flash-live-preview"
   );
 
   // Static config that never changes to prevent re-renders
