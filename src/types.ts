@@ -1,17 +1,8 @@
-import {
-  GoogleGenAIOptions,
-  LiveClientToolResponse,
-  LiveServerMessage,
-  Modality,
-  Part,
-} from "@google/genai";
-
 /**
- * the options to initiate the client, ensure apiKey is required
+ * The options to initiate the realtime client with a browser-safe ephemeral key.
  */
-export type LiveClientOptions = GoogleGenAIOptions & {
+export type LiveClientOptions = {
   apiKey: string;
-  responseModalities?: Modality[];
   systemInstruction?: string;
 };
 
@@ -20,14 +11,10 @@ export type StreamingLog = {
   date: Date;
   type: string;
   count?: number;
-  message:
-    | string
-    | ClientContentLog
-    | Omit<LiveServerMessage, "text" | "data">
-    | LiveClientToolResponse;
+  message: string | Record<string, unknown> | unknown;
 };
 
 export type ClientContentLog = {
-  turns: Part[];
+  turns: Array<{ text: string }>;
   turnComplete: boolean;
 };

@@ -1,20 +1,30 @@
-import { AuthToken } from "@google/genai";
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const client = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_KEY,
-    httpOptions: { apiVersion: "v1alpha" },
-  });
-  const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: "OPENAI_API_KEY is not configured" },
+      { status: 500 },
+    );
+  }
 
-  const token: AuthToken = await client.authTokens.create({
-    config: {
-      uses: 1, // The default
-      expireTime: expireTime, // Default is 30 mins
-      newSessionExpireTime: new Date(Date.now() + 1 * 60 * 1000).toISOString(), // Default 1 minute in the future
-      httpOptions: { apiVersion: "v1alpha" },
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const token = await client.realtime.clientSecrets.create({
+    expires_after: {
+      anchor: "created_at",
+      seconds: 600,
+    },
+    session: {
+      type: "realtime",
+      model: "gpt-realtime-2",
+      output_modalities: ["audio"],
+      reasoning: {
+        effort: "low",
+      },
     },
   });
 
