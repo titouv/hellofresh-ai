@@ -1,33 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GenAILiveClient } from "../lib/genai-live-client";
 import { LiveClientOptions } from "../types";
-import { AudioStreamer } from "../lib/audio-streamer";
-import { audioContext } from "../lib/utils";
-import VolMeterWorket from "../lib/worklets/vol-meter";
-import {
-  LiveConnectConfig,
-  MediaResolution,
-  Modality,
-  TurnCoverage,
-} from "@google/genai";
-import { toolsForConfig } from "@/components/tool-call";
+import { FunctionTool, RealtimeSessionConfig } from "@openai/agents/realtime";
+
+type LiveFunctionTool = FunctionTool<any, any, any>;
 
 export type UseLiveAPIResults = {
   client: GenAILiveClient;
-  setConfig: (config: LiveConnectConfig) => void;
-  config: LiveConnectConfig;
+  setConfig: (config: Partial<RealtimeSessionConfig>) => void;
+  config: Partial<RealtimeSessionConfig>;
   model: string;
   setModel: (model: string) => void;
+  setTools: (tools: LiveFunctionTool[]) => void;
   connected: boolean;
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   volume: number;
 };
 
-const systemIntruction: LiveConnectConfig["systemInstruction"] = {
-  parts: [
-    {
-      text: `Tu es un assistant qui aide les utilisateurs à trouver et cuisiner des recettes HelloFresh.
+const systemInstruction = `Tu es un assistant qui aide les utilisateurs à trouver et cuisiner des recettes HelloFresh.
 
 Tu peux:
 1. Chercher et sélectionner automatiquement des recettes en utilisant la fonction 'search_and_select_recipe' avec une requête (ingrédients, cuisine, nom de plat, etc.). Cette fonction trouvera des recettes correspondantes et sélectionnera automatiquement la première recette trouvée.
@@ -37,62 +28,51 @@ Tu peux:
 Si l'utilisateur n'a pas encore de recette, encourage-le à chercher une recette. Si une recette est sélectionnée, aide-le avec cette recette.
 
 À chaque fois que tu parles d'une etape, tu dois montrer l'etape avec la fonction 'render_step'
-`,
-    },
-  ],
-};
+`;
 
 export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
-  const client = useMemo(() => new GenAILiveClient(options), [options]);
-  const audioStreamerRef = useRef<AudioStreamer | null>(null);
+  const client = useMemo(
+    () =>
+      new GenAILiveClient({
+        ...options,
+        systemInstruction: options.systemInstruction || systemInstruction,
+      }),
+    [options],
+  );
+  const apiKeyRef = useRef(options.apiKey);
 
   const [model, setModel] = useState<string>(
     "gpt-realtime-2"
   );
 
   // Static config that never changes to prevent re-renders
-  const config: LiveConnectConfig = useMemo(
+  const config: Partial<RealtimeSessionConfig> = useMemo(
     () => ({
-      // httpOptions: { apiVersion: "v1alpha" },
-      responseModalities: [Modality.AUDIO],
-      // mediaResolution: MediaResolution.MEDIA_RESOLUTION_MEDIUM,
-      speechConfig: {
-        languageCode: "fr-FR",
-        voiceConfig: {
-          prebuiltVoiceConfig: {
-            voiceName: "Puck",
+      outputModalities: ["audio"],
+      reasoning: {
+        effort: "low",
+      },
+      parallelToolCalls: true,
+      audio: {
+        input: {
+          format: "pcm16",
+          transcription: {
+            model: "gpt-4o-mini-transcribe",
+          },
+          turnDetection: {
+            type: "server_vad",
           },
         },
+        output: {
+          format: "pcm16",
+        },
       },
-      realtimeInputConfig: {
-        turnCoverage: TurnCoverage.TURN_INCLUDES_ALL_INPUT,
-      },
-      tools: toolsForConfig,
-      systemInstruction: systemIntruction, // Static system instruction
     }),
     [],
   );
 
   const [connected, setConnected] = useState(false);
   const [volume, setVolume] = useState(0);
-
-  // Remove the dynamic system instruction update effect completely
-
-  // register audio for streaming server -> speakers
-  useEffect(() => {
-    if (!audioStreamerRef.current) {
-      audioContext({ id: "audio-out" }).then((audioCtx: AudioContext) => {
-        audioStreamerRef.current = new AudioStreamer(audioCtx);
-        audioStreamerRef.current
-          .addWorklet<any>("vumeter-out", VolMeterWorket, (ev: any) => {
-            setVolume(ev.data.volume);
-          })
-          .then(() => {
-            // Successfully added worklet
-          });
-      });
-    }
-  }, [audioStreamerRef]);
 
   useEffect(() => {
     const onOpen = () => {
@@ -105,19 +85,17 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
       setConnected(false);
     };
 
-    const onError = (error: ErrorEvent) => {
+    const onError = (error: unknown) => {
       console.log("onError");
       console.error("error", error);
     };
 
     const stopAudioStreamer = () => {
       console.log("stopAudioStreamer");
-      return audioStreamerRef.current?.stop();
     };
 
     const onAudio = (data: ArrayBuffer) => {
       console.log("onAudio");
-      return audioStreamerRef.current?.addPCM16(new Uint8Array(data));
     };
 
     client
@@ -144,7 +122,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
     }
     client.disconnect();
     console.log("connect", model, config);
-    await client.connect(model, config);
+    await client.connect(model, config, apiKeyRef.current);
   }, [client, config, model]);
 
   const disconnect = useCallback(async () => {
@@ -152,12 +130,18 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
     setConnected(false);
   }, [setConnected, client]);
 
+  const setTools = useCallback(
+    (tools: LiveFunctionTool[]) => client.setTools(tools),
+    [client],
+  );
+
   return {
     client,
     config,
     setConfig: () => {}, // No-op function since config is now static
     model,
     setModel,
+    setTools,
     connected,
     connect,
     disconnect,
