@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, memo } from "react";
+import { useEffect, useMemo, useRef, useState, memo } from "react";
 import { tool } from "@openai/agents/realtime";
 import { z } from "zod";
 import { useLiveAPIContext } from "@/contexts/live-api-context";
@@ -23,6 +23,36 @@ function ToolCallComponent() {
   const { recipe, setRecipe, servingSize, searchRecipes, recipesReady } =
     useRecipeContext();
   const { startTimer } = useTimerContext();
+  const recipeRef = useRef(recipe);
+  const recipesReadyRef = useRef(recipesReady);
+  const searchRecipesRef = useRef(searchRecipes);
+  const servingSizeRef = useRef(servingSize);
+  const shownStepRef = useRef(shownStep);
+  const startTimerRef = useRef(startTimer);
+
+  useEffect(() => {
+    recipeRef.current = recipe;
+  }, [recipe]);
+
+  useEffect(() => {
+    recipesReadyRef.current = recipesReady;
+  }, [recipesReady]);
+
+  useEffect(() => {
+    searchRecipesRef.current = searchRecipes;
+  }, [searchRecipes]);
+
+  useEffect(() => {
+    servingSizeRef.current = servingSize;
+  }, [servingSize]);
+
+  useEffect(() => {
+    shownStepRef.current = shownStep;
+  }, [shownStep]);
+
+  useEffect(() => {
+    startTimerRef.current = startTimer;
+  }, [startTimer]);
 
   useEffect(() => {
     if (!shownStep) {
@@ -41,8 +71,9 @@ function ToolCallComponent() {
             .describe("The step number to display"),
         }),
         execute: async ({ step_number }) => {
-          console.log("Rendering step", { step_number, recipe });
-          if (!recipe) {
+          const currentRecipe = recipeRef.current;
+          console.log("Rendering step", { step_number, recipe: currentRecipe });
+          if (!currentRecipe) {
             return {
               success: false,
               error:
@@ -50,7 +81,7 @@ function ToolCallComponent() {
             };
           }
 
-          const step = recipe.steps[step_number - 1];
+          const step = currentRecipe.steps[step_number - 1];
           if (!step) {
             return {
               success: false,
@@ -103,10 +134,12 @@ function ToolCallComponent() {
               );
             }
 
-            if (results.length === 0 && recipesReady) {
+            const currentRecipesReady = recipesReadyRef.current;
+
+            if (results.length === 0 && currentRecipesReady) {
               console.log(`🔵 [frontend] cached search start: "${query}"`);
               setLoadingMessage(`Searching cached recipes for "${query}"...`);
-              results = searchRecipes(query);
+              results = searchRecipesRef.current(query);
               if (results.length > 0) {
                 console.log(
                   `🟢 [frontend] cached search hit (${results.length} results)`,
@@ -119,7 +152,7 @@ function ToolCallComponent() {
             if (results.length === 0) {
               return {
                 success: false,
-                error: recipesReady
+                error: currentRecipesReady
                   ? "Aucune recette trouvée pour cette recherche"
                   : "Recipe database is still loading. Please try again in a moment.",
               };
@@ -139,7 +172,7 @@ function ToolCallComponent() {
                         Voici la recette:
                         ${fullRecipeToMarkdown(
                           fullRecipe,
-                          servingSize ?? undefined,
+                          servingSizeRef.current ?? undefined,
                         )}
 
                         `;
@@ -172,7 +205,7 @@ function ToolCallComponent() {
         }),
         execute: async ({ seconds }) => {
           console.log("Starting timer", { seconds });
-          const timerId = startTimer(seconds, () => {
+          const timerId = startTimerRef.current(seconds, () => {
             client.send({
               text: `RETOUR SYSTEME: Le timer s'est terminé, tu dois prévenir l'utilisateur que le timer s'est terminé`,
             });
@@ -188,7 +221,7 @@ function ToolCallComponent() {
         description: "Show the current step image in fullscreen",
         parameters: z.object({}),
         execute: async () => {
-          if (!shownStep) {
+          if (!shownStepRef.current) {
             return {
               success: false,
               error: "No step image available to show fullscreen",
@@ -215,16 +248,7 @@ function ToolCallComponent() {
         },
       }),
     ],
-    [
-      client,
-      recipe,
-      recipesReady,
-      searchRecipes,
-      servingSize,
-      setRecipe,
-      shownStep,
-      startTimer,
-    ],
+    [client, setRecipe],
   );
 
   useEffect(() => {
