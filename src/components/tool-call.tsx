@@ -8,12 +8,9 @@ import {
 import { useLiveAPIContext } from "@/contexts/live-api-context";
 import { useRecipeContext } from "@/contexts/recipe-context";
 import { useTimerContext } from "@/contexts/timer-context";
-import { RecipeSearchResult } from "@/hooks/use-recipe-search";
+import type { RecipeSearchResult } from "@/lib/api/types";
 import { RecipeScraped } from "../../recipe_types";
-import {
-  scrapeRecipeServerFn,
-  searchRecipesLiveServerFn,
-} from "@/server_functions";
+import { scrapeRecipeServerFn } from "@/server_functions";
 import { fullRecipeToMarkdown } from "@/app/debug/utils";
 
 const renderStepDeclaration: FunctionDeclaration = {
@@ -103,7 +100,7 @@ function ToolCallComponent() {
   const [loadingMessage, setLoadingMessage] = useState("");
   const [isStepImageFullscreen, setIsStepImageFullscreen] = useState(false);
   const { client } = useLiveAPIContext();
-  const { recipe, setRecipe, servingSize, searchRecipes, recipesReady } =
+  const { recipe, setRecipe, servingSize, searchRecipes } =
     useRecipeContext();
   const { startTimer } = useTimerContext();
 
@@ -199,39 +196,7 @@ function ToolCallComponent() {
           setLoadingMessage(`Searching for "${query}"...`);
 
           try {
-            let results: RecipeSearchResult[] = [];
-
-            try {
-              console.log(`🔵 [frontend] live search start: "${query}"`);
-              setLoadingMessage(`Searching live for "${query}"...`);
-              const liveResults = await searchRecipesLiveServerFn(query);
-              if (liveResults.length > 0) {
-                console.log(
-                  `🟢 [frontend] live search hit (${liveResults.length} results)`,
-                );
-                results = liveResults;
-              } else {
-                console.log("🟡 [frontend] live search returned 0 results");
-              }
-            } catch (error) {
-              console.warn(
-                "🟠 [frontend] live search failed, falling back to cache.",
-                error,
-              );
-            }
-
-            if (results.length === 0 && recipesReady) {
-              console.log(`🔵 [frontend] cached search start: "${query}"`);
-              setLoadingMessage(`Searching cached recipes for "${query}"...`);
-              results = searchRecipes(query);
-              if (results.length > 0) {
-                console.log(
-                  `🟢 [frontend] cached search hit (${results.length} results)`,
-                );
-              } else {
-                console.log("🟡 [frontend] cached search returned 0 results");
-              }
-            }
+            const results: RecipeSearchResult[] = await searchRecipes(query);
 
             if (results.length > 0) {
               const selectedRecipe = results[0]; // Always select the first result
@@ -280,18 +245,6 @@ function ToolCallComponent() {
                   name: fc.name || "",
                 });
               }
-            } else if (!recipesReady) {
-              functionResponses.push({
-                response: {
-                  output: {
-                    success: false,
-                    error:
-                      "Recipe database is still loading. Please try again in a moment.",
-                  },
-                },
-                id: fc.id || "",
-                name: fc.name || "",
-              });
             } else {
               functionResponses.push({
                 response: {
@@ -386,7 +339,7 @@ function ToolCallComponent() {
     return () => {
       client.off("toolcall", onToolCall);
     };
-  }, [client, recipe, setRecipe, startTimer, searchRecipes, recipesReady, shownStep]);
+  }, [client, recipe, setRecipe, startTimer, searchRecipes, shownStep]);
 
   const baseImageUrl =
     "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";

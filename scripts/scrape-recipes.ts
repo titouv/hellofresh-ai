@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { RecipeSearchResult } from "../scrape";
+import type { RecipeSearchResult } from "../src/lib/api/types";
 
 async function getRecipePageData(page: number) {
   const cachePath = `./.cache/recipes/page-${page}.json`;
