@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { RecipeScraped } from "../../recipe_types";
-import { useRecipeSearch, RecipeSearchResult } from "@/hooks/use-recipe-search";
+import { searchRecipesServerFn } from "@/server_functions";
+import type { RecipeSearchResult } from "@/lib/api/types";
 
 const cookingHistoryStorageKey = "hellofresh-cooking-history";
 const cookingHistoryMaxItems = 12;
@@ -21,10 +22,7 @@ interface RecipeContextType {
   setRecipe: (recipe: RecipeScraped | null) => void;
   servingSize: number | null;
   setServingSize: (size: number | null) => void;
-  searchRecipes: (query: string) => RecipeSearchResult[];
-  recipesLoading: boolean;
-  recipesError: string | null;
-  recipesReady: boolean;
+  searchRecipes: (query: string) => Promise<RecipeSearchResult[]>;
   cookingHistory: CookingHistoryItem[];
   clearCookingHistory: () => void;
 }
@@ -37,12 +35,10 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
   const [cookingHistory, setCookingHistory] = useState<CookingHistoryItem[]>(
     [],
   );
-  const {
-    searchRecipes,
-    loading: recipesLoading,
-    error: recipesError,
-    ready: recipesReady,
-  } = useRecipeSearch();
+
+  const searchRecipes = async (query: string) => {
+    return searchRecipesServerFn(query);
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem(cookingHistoryStorageKey);
@@ -139,9 +135,6 @@ export function RecipeProvider({ children }: { children: ReactNode }) {
         servingSize,
         setServingSize,
         searchRecipes,
-        recipesLoading,
-        recipesError,
-        recipesReady,
         cookingHistory,
         clearCookingHistory,
       }}
