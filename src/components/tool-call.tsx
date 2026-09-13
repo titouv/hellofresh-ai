@@ -1,10 +1,6 @@
-import { useEffect, useState, memo } from "react";
-import {
-  Behavior,
-  FunctionDeclaration,
-  LiveServerToolCall,
-  Type,
-} from "@google/genai";
+import { useEffect, useMemo, useRef, useState, memo } from "react";
+import { tool } from "@openai/agents/realtime";
+import { z } from "zod";
 import { useLiveAPIContext } from "@/contexts/live-api-context";
 import { useRecipeContext } from "@/contexts/recipe-context";
 import { useTimerContext } from "@/contexts/timer-context";
@@ -16,85 +12,6 @@ import {
 } from "@/server_functions";
 import { fullRecipeToMarkdown } from "@/app/debug/utils";
 
-const renderStepDeclaration: FunctionDeclaration = {
-  name: "render_step",
-  description: "Displays the content of the step number n",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      step_number: {
-        type: Type.NUMBER,
-        description: "The step number to display",
-      },
-    },
-    required: ["step_number"],
-  },
-};
-
-const searchAndSelectRecipeDeclaration: FunctionDeclaration = {
-  name: "search_and_select_recipe",
-  description:
-    "Search for HelloFresh recipes and automatically select the first matching result",
-  behavior: Behavior.NON_BLOCKING,
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      query: {
-        type: Type.STRING,
-        description:
-          "Search query for recipes (e.g., 'pasta', 'chicken', 'vegetarian', 'italien')",
-      },
-    },
-    required: ["query"],
-  },
-};
-
-const startTimerDeclaration: FunctionDeclaration = {
-  name: "start_timer",
-  description: "Start a timer for a specified duration in seconds",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      seconds: {
-        type: Type.NUMBER,
-        description: "Duration of the timer in seconds",
-      },
-    },
-    required: ["seconds"],
-  },
-};
-
-const showStepImageFullscreenDeclaration: FunctionDeclaration = {
-  name: "show_step_image_fullscreen",
-  description: "Show the current step image in fullscreen",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {},
-  },
-};
-
-const hideStepImageFullscreenDeclaration: FunctionDeclaration = {
-  name: "hide_step_image_fullscreen",
-  description: "Hide the fullscreen step image",
-  parameters: {
-    type: Type.OBJECT,
-    properties: {},
-  },
-};
-
-export const toolsForConfig = [
-  { googleSearch: {} },
-  {
-    functionDeclarations: [
-      renderStepDeclaration,
-      searchAndSelectRecipeDeclaration,
-      startTimerDeclaration,
-      showStepImageFullscreenDeclaration,
-      hideStepImageFullscreenDeclaration,
-    ],
-  },
-];
-
 function ToolCallComponent() {
   const [shownStep, setShownStep] = useState<
     RecipeScraped["steps"][number] | null
@@ -102,10 +19,40 @@ function ToolCallComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [isStepImageFullscreen, setIsStepImageFullscreen] = useState(false);
-  const { client } = useLiveAPIContext();
+  const { client, setTools } = useLiveAPIContext();
   const { recipe, setRecipe, servingSize, searchRecipes, recipesReady } =
     useRecipeContext();
   const { startTimer } = useTimerContext();
+  const recipeRef = useRef(recipe);
+  const recipesReadyRef = useRef(recipesReady);
+  const searchRecipesRef = useRef(searchRecipes);
+  const servingSizeRef = useRef(servingSize);
+  const shownStepRef = useRef(shownStep);
+  const startTimerRef = useRef(startTimer);
+
+  useEffect(() => {
+    recipeRef.current = recipe;
+  }, [recipe]);
+
+  useEffect(() => {
+    recipesReadyRef.current = recipesReady;
+  }, [recipesReady]);
+
+  useEffect(() => {
+    searchRecipesRef.current = searchRecipes;
+  }, [searchRecipes]);
+
+  useEffect(() => {
+    servingSizeRef.current = servingSize;
+  }, [servingSize]);
+
+  useEffect(() => {
+    shownStepRef.current = shownStep;
+  }, [shownStep]);
+
+  useEffect(() => {
+    startTimerRef.current = startTimer;
+  }, [startTimer]);
 
   useEffect(() => {
     if (!shownStep) {
@@ -113,88 +60,55 @@ function ToolCallComponent() {
     }
   }, [shownStep]);
 
-  useEffect(() => {
-    const onToolCall = async (toolCall: LiveServerToolCall) => {
-      // Play sound when action starts
-      try {
-        const audio = new Audio(
-          "https://assets.mixkit.co/active_storage/sfx/2867/2867-preview.mp3",
-        );
-        audio.volume = 0.3;
-        audio.play().catch(() => {
-          // Ignore audio play errors (e.g., user hasn't interacted yet)
-        });
-      } catch (error) {
-        // Ignore any audio errors
-      }
-
-      console.log("onToolCall", toolCall, { recipe });
-      if (!toolCall.functionCalls) {
-        return;
-      }
-
-      const functionResponses: Array<{
-        response: {
-          output: {
-            success: boolean;
-            message?: string;
-            results?: any;
-            error?: string;
-          };
-        };
-        id: string;
-        name: string;
-      }> = [];
-
-      for (const fc of toolCall.functionCalls) {
-        console.log("Processing function call:", fc.name, fc.args);
-
-        if (fc.name === renderStepDeclaration.name) {
-          console.log("Rendering step", fc.args, { recipe });
-          if (recipe) {
-            const stepNumber = (fc.args as any).step_number;
-            const step = recipe.steps[stepNumber - 1];
-            if (step) {
-              setShownStep(step);
-              functionResponses.push({
-                response: {
-                  output: {
-                    success: true,
-                    message: `Step ${stepNumber} displayed`,
-                  },
-                },
-                id: fc.id || "",
-                name: fc.name || "",
-              });
-            } else {
-              functionResponses.push({
-                response: {
-                  output: {
-                    success: false,
-                    error: `Step ${stepNumber} not found in recipe`,
-                  },
-                },
-                id: fc.id || "",
-                name: fc.name || "",
-              });
-            }
-          } else {
-            functionResponses.push({
-              response: {
-                output: {
-                  success: false,
-                  error:
-                    "No recipe selected. Please search and select a recipe first.",
-                },
-              },
-              id: fc.id || "",
-              name: fc.name || "",
-            });
+  const liveTools = useMemo(
+    () => [
+      tool({
+        name: "render_step",
+        description: "Displays the content of the step number n",
+        parameters: z.object({
+          step_number: z
+            .number()
+            .describe("The step number to display"),
+        }),
+        execute: async ({ step_number }) => {
+          const currentRecipe = recipeRef.current;
+          console.log("Rendering step", { step_number, recipe: currentRecipe });
+          if (!currentRecipe) {
+            return {
+              success: false,
+              error:
+                "No recipe selected. Please search and select a recipe first.",
+            };
           }
-        } else if (fc.name === searchAndSelectRecipeDeclaration.name) {
-          console.log("Searching and selecting recipe", fc.args);
-          const query = (fc.args as any).query;
 
+          const step = currentRecipe.steps[step_number - 1];
+          if (!step) {
+            return {
+              success: false,
+              error: `Step ${step_number} not found in recipe`,
+            };
+          }
+
+          setShownStep(step);
+          return {
+            success: true,
+            message: `Step ${step_number} displayed`,
+          };
+        },
+      }),
+      tool({
+        name: "search_and_select_recipe",
+        description:
+          "Search for HelloFresh recipes and automatically select the first matching result",
+        parameters: z.object({
+          query: z
+            .string()
+            .describe(
+              "Search query for recipes (e.g., 'pasta', 'chicken', 'vegetarian', 'italien')",
+            ),
+        }),
+        execute: async ({ query }) => {
+          console.log("Searching and selecting recipe", { query });
           setIsLoading(true);
           setLoadingMessage(`Searching for "${query}"...`);
 
@@ -220,10 +134,12 @@ function ToolCallComponent() {
               );
             }
 
-            if (results.length === 0 && recipesReady) {
+            const currentRecipesReady = recipesReadyRef.current;
+
+            if (results.length === 0 && currentRecipesReady) {
               console.log(`🔵 [frontend] cached search start: "${query}"`);
               setLoadingMessage(`Searching cached recipes for "${query}"...`);
-              results = searchRecipes(query);
+              results = searchRecipesRef.current(query);
               if (results.length > 0) {
                 console.log(
                   `🟢 [frontend] cached search hit (${results.length} results)`,
@@ -233,152 +149,125 @@ function ToolCallComponent() {
               }
             }
 
-            if (results.length > 0) {
-              const selectedRecipe = results[0]; // Always select the first result
-              setLoadingMessage(`Loading recipe "${selectedRecipe.name}"...`);
+            if (results.length === 0) {
+              return {
+                success: false,
+                error: currentRecipesReady
+                  ? "Aucune recette trouvée pour cette recherche"
+                  : "Recipe database is still loading. Please try again in a moment.",
+              };
+            }
 
-              try {
-                const fullRecipe = await scrapeRecipeServerFn(
-                  selectedRecipe.url,
-                );
-                console.log("fullRecipe", fullRecipe);
-                setRecipe(fullRecipe);
+            const selectedRecipe = results[0];
+            setLoadingMessage(`Loading recipe "${selectedRecipe.name}"...`);
 
-                const message = `Recette "${
-                  selectedRecipe.name
-                }" trouvée et sélectionnée automatiquement
+            const fullRecipe = await scrapeRecipeServerFn(selectedRecipe.url);
+            console.log("fullRecipe", fullRecipe);
+            setRecipe(fullRecipe);
+
+            const message = `Recette "${
+              selectedRecipe.name
+            }" trouvée et sélectionnée automatiquement
 
                         Voici la recette:
                         ${fullRecipeToMarkdown(
                           fullRecipe,
-                          servingSize ?? undefined,
+                          servingSizeRef.current ?? undefined,
                         )}
 
                         `;
 
-                console.log("MESSAGE RETURNED TO USER", message);
+            console.log("MESSAGE RETURNED TO USER", message);
 
-                functionResponses.push({
-                  response: {
-                    output: {
-                      success: true,
-                      message: message,
-                    },
-                  },
-                  id: fc.id || "",
-                  name: fc.name || "",
-                });
-              } catch (error) {
-                functionResponses.push({
-                  response: {
-                    output: {
-                      success: false,
-                      error: "Failed to load recipe",
-                    },
-                  },
-                  id: fc.id || "",
-                  name: fc.name || "",
-                });
-              }
-            } else if (!recipesReady) {
-              functionResponses.push({
-                response: {
-                  output: {
-                    success: false,
-                    error:
-                      "Recipe database is still loading. Please try again in a moment.",
-                  },
-                },
-                id: fc.id || "",
-                name: fc.name || "",
-              });
-            } else {
-              functionResponses.push({
-                response: {
-                  output: {
-                    success: false,
-                    error: "Aucune recette trouvée pour cette recherche",
-                  },
-                },
-                id: fc.id || "",
-                name: fc.name || "",
-              });
-            }
+            return {
+              success: true,
+              message,
+            };
           } catch (error) {
-            functionResponses.push({
-              response: {
-                output: { success: false, error: "Failed to search recipes" },
-              },
-              id: fc.id || "",
-              name: fc.name || "",
-            });
+            console.warn("Failed to search recipes", error);
+            return {
+              success: false,
+              error: "Failed to search recipes",
+            };
           } finally {
             setIsLoading(false);
             setLoadingMessage("");
           }
-        } else if (fc.name === startTimerDeclaration.name) {
-          console.log("Starting timer", fc.args);
-          const seconds = (fc.args as any).seconds;
-          const timerId = startTimer(seconds, () => {
-            // Send message to AI when timer finishes
+        },
+      }),
+      tool({
+        name: "start_timer",
+        description: "Start a timer for a specified duration in seconds",
+        parameters: z.object({
+          seconds: z
+            .number()
+            .describe("Duration of the timer in seconds"),
+        }),
+        execute: async ({ seconds }) => {
+          console.log("Starting timer", { seconds });
+          const timerId = startTimerRef.current(seconds, () => {
             client.send({
-              text: `RETOUR SYSTEME: Le timer s'est terminé, tu doois prévenir l'utilisateur que le timer s'est terminé`,
+              text: `RETOUR SYSTEME: Le timer s'est terminé, tu dois prévenir l'utilisateur que le timer s'est terminé`,
             });
           });
-          functionResponses.push({
-            response: {
-              output: {
-                success: true,
-                message: `Timer started for ${seconds} seconds (Timer ID: ${timerId})`,
-              },
-            },
-            id: fc.id || "",
-            name: fc.name || "",
-          });
-        } else if (fc.name === showStepImageFullscreenDeclaration.name) {
-          if (shownStep) {
-            setIsStepImageFullscreen(true);
-            functionResponses.push({
-              response: {
-                output: {
-                  success: true,
-                  message: "Step image shown fullscreen",
-                },
-              },
-              id: fc.id || "",
-              name: fc.name || "",
-            });
-          } else {
-            functionResponses.push({
-              response: {
-                output: {
-                  success: false,
-                  error: "No step image available to show fullscreen",
-                },
-              },
-              id: fc.id || "",
-              name: fc.name || "",
-            });
+          return {
+            success: true,
+            message: `Timer started for ${seconds} seconds (Timer ID: ${timerId})`,
+          };
+        },
+      }),
+      tool({
+        name: "show_step_image_fullscreen",
+        description: "Show the current step image in fullscreen",
+        parameters: z.object({}),
+        execute: async () => {
+          if (!shownStepRef.current) {
+            return {
+              success: false,
+              error: "No step image available to show fullscreen",
+            };
           }
-        } else if (fc.name === hideStepImageFullscreenDeclaration.name) {
-          setIsStepImageFullscreen(false);
-          functionResponses.push({
-            response: {
-              output: {
-                success: true,
-                message: "Fullscreen step image hidden",
-              },
-            },
-            id: fc.id || "",
-            name: fc.name || "",
-          });
-        }
-      }
-      console.log("functionResponses", functionResponses);
 
-      if (functionResponses.length > 0) {
-        console.log("sending tool response");
-        setTimeout(() => client.sendToolResponse({ functionResponses }), 200);
+          setIsStepImageFullscreen(true);
+          return {
+            success: true,
+            message: "Step image shown fullscreen",
+          };
+        },
+      }),
+      tool({
+        name: "hide_step_image_fullscreen",
+        description: "Hide the fullscreen step image",
+        parameters: z.object({}),
+        execute: async () => {
+          setIsStepImageFullscreen(false);
+          return {
+            success: true,
+            message: "Fullscreen step image hidden",
+          };
+        },
+      }),
+    ],
+    [client, setRecipe],
+  );
+
+  useEffect(() => {
+    setTools(liveTools);
+  }, [liveTools, setTools]);
+
+  useEffect(() => {
+    const onToolCall = async () => {
+      // Play sound when action starts
+      try {
+        const audio = new Audio(
+          "https://assets.mixkit.co/active_storage/sfx/2867/2867-preview.mp3",
+        );
+        audio.volume = 0.3;
+        audio.play().catch(() => {
+          // Ignore audio play errors (e.g., user hasn't interacted yet)
+        });
+      } catch (error) {
+        // Ignore any audio errors
       }
     };
 
@@ -386,7 +275,7 @@ function ToolCallComponent() {
     return () => {
       client.off("toolcall", onToolCall);
     };
-  }, [client, recipe, setRecipe, startTimer, searchRecipes, recipesReady, shownStep]);
+  }, [client]);
 
   const baseImageUrl =
     "https://img.hellofresh.com/w_384,q_auto,f_auto,c_limit,fl_lossy/hellofresh_s3/";

@@ -1,35 +1,28 @@
-import {
-  Content,
-  GoogleGenAI,
-  LiveCallbacks,
-  LiveClientToolResponse,
-  LiveConnectConfig,
-  LiveServerContent,
-  LiveServerMessage,
-  LiveServerToolCall,
-  LiveServerToolCallCancellation,
-  Part,
-  Session,
-} from "@google/genai";
-
 import { EventEmitter } from "eventemitter3";
-import { difference } from "lodash";
-import { LiveClientOptions, StreamingLog } from "../types";
+import {
+  FunctionTool,
+  RealtimeAgent,
+  RealtimeSession,
+  RealtimeSessionConfig,
+  TransportLayerAudio,
+} from "@openai/agents/realtime";
 import { base64ToArrayBuffer } from "./utils";
+import { LiveClientOptions, StreamingLog } from "../types";
+
+type LiveFunctionTool = FunctionTool<any, any, any>;
 
 /**
- * Event types that can be emitted by the MultimodalLiveClient.
- * Each event corresponds to a specific message from GenAI or client state change.
+ * Event types emitted by the OpenAI realtime client wrapper.
  */
 export interface LiveClientEventTypes {
-  // Emitted when audio data is received
+  // Emitted when audio data is received by transports that expose audio manually.
   audio: (data: ArrayBuffer) => void;
   // Emitted when the connection closes
-  close: (event: CloseEvent) => void;
-  // Emitted when content is received from the server
-  content: (data: LiveServerContent) => void;
+  close: (event?: CloseEvent) => void;
+  // Emitted when content/history is received from the server
+  content: (data: unknown) => void;
   // Emitted when an error occurs
-  error: (error: ErrorEvent) => void;
+  error: (error: unknown) => void;
   // Emitted when the server interrupts the current generation
   interrupted: () => void;
   // Emitted for logging events
@@ -38,30 +31,23 @@ export interface LiveClientEventTypes {
   open: () => void;
   // Emitted when the initial setup is complete
   setupcomplete: () => void;
-  // Emitted when a tool call is received
-  toolcall: (toolCall: LiveServerToolCall) => void;
-  // Emitted when a tool call is cancelled
-  toolcallcancellation: (
-    toolcallCancellation: LiveServerToolCallCancellation
-  ) => void;
+  // Kept for backwards compatibility; OpenAI tool execution is handled by SDK tools.
+  toolcall: (toolCall: unknown) => void;
+  toolcallcancellation: (toolcallCancellation: unknown) => void;
   // Emitted when the current turn is complete
   turncomplete: () => void;
 }
 
 /**
- * A event-emitting class that manages the connection to the websocket and emits
- * events to the rest of the application.
- * If you dont want to use react you can still use this.
+ * Event-emitting wrapper around the OpenAI Agents SDK realtime session.
  */
 export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
-  protected client: GoogleGenAI;
-
   private _status: "connected" | "disconnected" | "connecting" = "disconnected";
   public get status() {
     return this._status;
   }
 
-  private _session: Session | null = null;
+  private _session: RealtimeSession | null = null;
   public get session() {
     return this._session;
   }
@@ -71,7 +57,9 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
     return this._model;
   }
 
-  protected config: LiveConnectConfig | null = null;
+  private _tools: LiveFunctionTool[] = [];
+  private _systemInstruction = "";
+  protected config: Partial<RealtimeSessionConfig> | null = null;
 
   public getConfig() {
     return { ...this.config };
@@ -79,12 +67,7 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
 
   constructor(options: LiveClientOptions) {
     super();
-    this.client = new GoogleGenAI(options);
-    this.send = this.send.bind(this);
-    this.onopen = this.onopen.bind(this);
-    this.onerror = this.onerror.bind(this);
-    this.onclose = this.onclose.bind(this);
-    this.onmessage = this.onmessage.bind(this);
+    this._systemInstruction = options.systemInstruction || "";
   }
 
   protected log(type: string, message: StreamingLog["message"]) {
@@ -96,7 +79,69 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
     this.emit("log", log);
   }
 
-  async connect(model: string, config: LiveConnectConfig): Promise<boolean> {
+  setTools(tools: LiveFunctionTool[]) {
+    this._tools = tools;
+    if (this.session) {
+      this.session.updateAgent(this.createAgent()).catch((error) => {
+        this.log("client.updateAgent.error", error);
+        this.emit("error", error);
+      });
+    }
+  }
+
+  private createAgent() {
+    return new RealtimeAgent({
+      name: "HelloFresh cooking assistant",
+      instructions: this._systemInstruction,
+      tools: this._tools,
+      voice: "ash",
+    });
+  }
+
+  private createSession(model: string, config: Partial<RealtimeSessionConfig>) {
+    const session = new RealtimeSession(this.createAgent(), {
+      model,
+      config,
+      transport: "webrtc",
+      tracingDisabled: false,
+    });
+
+    session.on("audio", (event: TransportLayerAudio) => {
+      this.emit("audio", event.data);
+      this.log("server.audio", `buffer (${event.data.byteLength})`);
+    });
+    session.on("audio_interrupted", () => {
+      this.log("server.content", "interrupted");
+      this.emit("interrupted");
+    });
+    session.on("agent_tool_start", (_context, _agent, tool, details) => {
+      this.log("server.toolCall", {
+        name: tool.name,
+        callId: details.toolCall.id,
+      });
+      this.emit("toolcall", details.toolCall);
+    });
+    session.on("audio_stopped", () => {
+      this.log("server.content", "turnComplete");
+      this.emit("turncomplete");
+    });
+    session.on("history_updated", (history) => {
+      this.emit("content", { history });
+      this.log("server.history", { historyLength: history.length });
+    });
+    session.on("error", (event) => {
+      this.log("server.error", event);
+      this.emit("error", event.error);
+    });
+
+    return session;
+  }
+
+  async connect(
+    model: string,
+    config: Partial<RealtimeSessionConfig>,
+    apiKey: string
+  ): Promise<boolean> {
     if (this._status === "connected" || this._status === "connecting") {
       return false;
     }
@@ -105,26 +150,20 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
     this.config = config;
     this._model = model;
 
-    const callbacks: LiveCallbacks = {
-      onopen: this.onopen,
-      onmessage: this.onmessage,
-      onerror: this.onerror,
-      onclose: this.onclose,
-    };
-
     try {
-      this._session = await this.client.live.connect({
-        model,
-        config,
-        callbacks,
-      });
+      this._session = this.createSession(model, config);
+      await this._session.connect({ apiKey });
     } catch (e) {
-      console.error("Error connecting to GenAI Live:", e);
+      console.error("Error connecting to OpenAI Realtime:", e);
       this._status = "disconnected";
+      this.emit("error", e);
       return false;
     }
 
     this._status = "connected";
+    this.log("client.open", "Connected");
+    this.emit("open");
+    this.emit("setupcomplete");
     return true;
   }
 
@@ -132,110 +171,29 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
     if (!this.session) {
       return false;
     }
-    this.session?.close();
+    this.session.close();
     this._session = null;
     this._status = "disconnected";
 
     this.log("client.close", `Disconnected`);
+    this.emit("close");
     return true;
   }
 
-  protected onopen() {
-    this.log("client.open", "Connected");
-    this.emit("open");
-  }
-
-  protected onerror(e: ErrorEvent) {
-    this.log("server.error", e.message);
-    this.emit("error", e);
-  }
-
-  protected onclose(e: CloseEvent) {
-    this.log(
-      `server.close`,
-      `disconnected ${e.reason ? `with reason: ${e.reason}` : ``}`
-    );
-    this.emit("close", e);
-  }
-
-  protected async onmessage(message: LiveServerMessage) {
-    if (message.setupComplete) {
-      this.log("server.send", "setupComplete");
-      this.emit("setupcomplete");
-      return;
-    }
-    if (message.toolCall) {
-      this.log("server.toolCall", message);
-      this.emit("toolcall", message.toolCall);
-      return;
-    }
-    if (message.toolCallCancellation) {
-      this.log("server.toolCallCancellation", message);
-      this.emit("toolcallcancellation", message.toolCallCancellation);
-      return;
-    }
-
-    // this json also might be `contentUpdate { interrupted: true }`
-    // or contentUpdate { end_of_turn: true }
-    if (message.serverContent) {
-      const { serverContent } = message;
-      if ("interrupted" in serverContent) {
-        this.log("server.content", "interrupted");
-        this.emit("interrupted");
-        return;
-      }
-      if ("turnComplete" in serverContent) {
-        this.log("server.content", "turnComplete");
-        this.emit("turncomplete");
-      }
-
-      if ("modelTurn" in serverContent) {
-        let parts: Part[] = serverContent.modelTurn?.parts || [];
-
-        // when its audio that is returned for modelTurn
-        const audioParts = parts.filter(
-          (p) => p.inlineData && p.inlineData.mimeType?.startsWith("audio/pcm")
-        );
-        const base64s = audioParts.map((p) => p.inlineData?.data);
-
-        // strip the audio parts out of the modelTurn
-        const otherParts = difference(parts, audioParts);
-        // console.log("otherParts", otherParts);
-
-        base64s.forEach((b64) => {
-          if (b64) {
-            const data = base64ToArrayBuffer(b64);
-            this.emit("audio", data);
-            this.log(`server.audio`, `buffer (${data.byteLength})`);
-          }
-        });
-        if (!otherParts.length) {
-          return;
-        }
-
-        parts = otherParts;
-
-        const content: { modelTurn: Content } = { modelTurn: { parts } };
-        this.emit("content", content);
-        this.log(`server.content`, message);
-      }
-    } else {
-      console.log("received unmatched message", message);
-    }
-  }
-
   /**
-   * send realtimeInput, this is base64 chunks of "audio/pcm" and/or "image/jpg"
+   * Send realtime input. WebRTC manages microphone input by default, but this
+   * remains available for components that manually provide PCM chunks.
    */
   sendRealtimeInput(chunks: Array<{ mimeType: string; data: string }>) {
     let hasAudio = false;
     let hasVideo = false;
     for (const ch of chunks) {
-      this.session?.sendRealtimeInput({ media: ch });
       if (ch.mimeType.includes("audio")) {
+        this.session?.sendAudio(base64ToArrayBuffer(ch.data));
         hasAudio = true;
       }
       if (ch.mimeType.includes("image")) {
+        this.session?.addImage(`data:${ch.mimeType};base64,${ch.data}`);
         hasVideo = true;
       }
       if (hasAudio && hasVideo) {
@@ -253,29 +211,23 @@ export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
     this.log(`client.realtimeInput`, message);
   }
 
-  /**
-   *  send a response to a function call and provide the id of the functions you are responding to
-   */
-  sendToolResponse(toolResponse: LiveClientToolResponse) {
-    if (
-      toolResponse.functionResponses &&
-      toolResponse.functionResponses.length
-    ) {
-      this.session?.sendToolResponse({
-        functionResponses: toolResponse.functionResponses,
-      });
-      this.log(`client.toolResponse`, toolResponse);
-    }
+  sendToolResponse(toolResponse: unknown) {
+    this.log(`client.toolResponse.ignored`, toolResponse);
   }
 
   /**
    * send normal content parts such as { text }
    */
-  send(parts: Part | Part[], turnComplete: boolean = true) {
-    this.session?.sendClientContent({ turns: parts, turnComplete });
+  send(parts: { text: string } | Array<{ text: string }>, turnComplete = true) {
+    const messages = Array.isArray(parts) ? parts : [parts];
+    messages.forEach((part) => this.session?.sendMessage(part.text));
     this.log(`client.send`, {
-      turns: Array.isArray(parts) ? parts : [parts],
+      turns: messages,
       turnComplete,
     });
+  }
+
+  mute(muted: boolean) {
+    this.session?.mute(muted);
   }
 }

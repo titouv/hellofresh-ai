@@ -9,7 +9,6 @@ import {
   RecipeProvider,
   useRecipeContext,
 } from "@/contexts/recipe-context";
-import { AudioRecorder } from "@/lib/audio-recorder";
 import { useEffect, useRef, useState } from "react";
 import { useWakeLock } from "@/hooks/use-wake-lock";
 import { Mic, Square, VolumeX } from "lucide-react";
@@ -28,7 +27,6 @@ function Inside() {
     cookingHistory,
     clearCookingHistory,
   } = useRecipeContext();
-  const [audioRecorder] = useState(() => new AudioRecorder());
   const [muted, setMuted] = useState(false);
   const [inVolume, setInVolume] = useState(0);
   const [historyLoadingId, setHistoryLoadingId] = useState<string | null>(null);
@@ -39,23 +37,11 @@ function Inside() {
   useWakeLock(connected);
 
   useEffect(() => {
-    const onData = (base64: string) => {
-      client.sendRealtimeInput([
-        {
-          mimeType: "audio/pcm;rate=16000",
-          data: base64,
-        },
-      ]);
-    };
-    if (connected && !muted && audioRecorder) {
-      audioRecorder.on("data", onData).on("volume", setInVolume).start();
-    } else {
-      audioRecorder.stop();
+    if (connected) {
+      client.mute(muted);
     }
-    return () => {
-      audioRecorder.off("data", onData).off("volume", setInVolume);
-    };
-  }, [connected, client, muted, audioRecorder]);
+    setInVolume(muted ? 0 : 0.2);
+  }, [client, connected, muted]);
 
   const [maxVolumeReached, setMaxVolumeReached] = useState(0);
 
@@ -289,9 +275,9 @@ function Inside() {
           <div className="max-w-sm text-center">
             <p className="text-gray-600 text-sm leading-relaxed">
               Try saying: <br />
-              <span className="italic">"Search for a pasta recipe"</span>
+              <span className="italic">&quot;Search for a pasta recipe&quot;</span>
               <br />
-              <span className="italic">"I want to cook chicken"</span>
+              <span className="italic">&quot;I want to cook chicken&quot;</span>
             </p>
           </div>
         )}
@@ -389,14 +375,18 @@ import { ToolCall } from "@/components/tool-call";
 import { TextInput } from "@/components/text-input";
 import { TimerDisplay } from "@/components/timer-display";
 import { useQuery } from "@tanstack/react-query";
-import { AuthToken } from "@google/genai";
+
+type RealtimeClientToken = {
+  value: string;
+  expires_at: number;
+};
 
 export default function Home() {
   const { data: token } = useQuery({
     queryFn: async () => {
       const response = await fetch("/api/ephemeral-token");
       const data = await response.json();
-      return data.token as AuthToken;
+      return data.token as RealtimeClientToken;
     },
     queryKey: ["ephemeral-token"],
   });
@@ -426,15 +416,14 @@ export default function Home() {
     );
   }
 
-  if (!token.name) {
-    return <div>No token name </div>;
+  if (!token.value) {
+    return <div>No realtime token</div>;
   }
 
   return (
     <LiveAPIProvider
       options={{
-        apiKey: token.name,
-        httpOptions: { apiVersion: "v1alpha" },
+        apiKey: token.value,
       }}
     >
       <RecipeProvider>
