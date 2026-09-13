@@ -42,7 +42,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   const apiKeyRef = useRef(options.apiKey);
 
   const [model, setModel] = useState<string>(
-    "gpt-realtime-2"
+    "gpt-realtime-2.1"
   );
 
   // Static config that never changes to prevent re-renders
