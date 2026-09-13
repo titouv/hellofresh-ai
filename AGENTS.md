@@ -12,7 +12,7 @@ Use the npm scripts in `package.json`:
 - `npm run dev`: start the local dev server (Turbopack) at `http://localhost:3000`.
 - `npm run build`: production build.
 - `npm run start`: run the built app.
-- `npm run lint`: ESLint via Next.js.
+- `npm run lint`: ESLint (flat config in `eslint.config.mjs`).
 
 ## Coding Style & Naming Conventions
 - Language: TypeScript/React; Tailwind CSS for styling (`src/app/globals.css`).
