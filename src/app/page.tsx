@@ -275,9 +275,9 @@ function Inside() {
           <div className="max-w-sm text-center">
             <p className="text-gray-600 text-sm leading-relaxed">
               Try saying: <br />
-              <span className="italic">"Search for a pasta recipe"</span>
+              <span className="italic">&quot;Search for a pasta recipe&quot;</span>
               <br />
-              <span className="italic">"I want to cook chicken"</span>
+              <span className="italic">&quot;I want to cook chicken&quot;</span>
             </p>
           </div>
         )}
