@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GenAILiveClient } from "../lib/genai-live-client";
 import { LiveClientOptions } from "../types";
-import { FunctionTool, RealtimeSessionConfig } from "@openai/agents/realtime";
+import {
+  FunctionTool,
+  RealtimeSessionConfig,
+} from "@openai/agents/realtime";
+import {
+  REALTIME_MODEL,
+  REALTIME_TRANSCRIPTION_MODEL,
+} from "@/lib/realtime-config";
 
 type LiveFunctionTool = FunctionTool<any, any, any>;
 
@@ -41,9 +48,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
   );
   const apiKeyRef = useRef(options.apiKey);
 
-  const [model, setModel] = useState<string>(
-    "gpt-realtime-2.1"
-  );
+  const [model, setModel] = useState<string>(REALTIME_MODEL);
 
   // Static config that never changes to prevent re-renders
   const config: Partial<RealtimeSessionConfig> = useMemo(
@@ -57,7 +62,7 @@ export function useLiveAPI(options: LiveClientOptions): UseLiveAPIResults {
         input: {
           format: "pcm16",
           transcription: {
-            model: "gpt-4o-mini-transcribe",
+            model: REALTIME_TRANSCRIPTION_MODEL,
           },
           turnDetection: {
             type: "server_vad",

@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { REALTIME_MODEL } from "@/lib/realtime-config";
 
 export async function GET() {
   if (!process.env.OPENAI_API_KEY) {
@@ -20,7 +21,7 @@ export async function GET() {
     },
     session: {
       type: "realtime",
-      model: "gpt-realtime-2.1",
+      model: REALTIME_MODEL,
       output_modalities: ["audio"],
       reasoning: {
         effort: "low",
